@@ -1,4 +1,28 @@
-body
+#react-root
   font-family: "Barlow"
   font-weight: 400
+  background-color: #080314
+  width: 100vw
+  height: 100vh
+  display: grid
+  grid-template-columns: 100px [editor-start] 1fr
+  grid-template-rows: 50px [editor-start] 1fr 20px
+
+.editor
+  position: relative
+  background-image: url("../img/background.png")
+  grid-column: editor-start
+  grid-row: editor-start
+
+/**  Block  **/
+
+.block 
+  position: absolute
+
+.block-background-light 
+  fill: #FAF9F7
+
+.block-background-darker
+  stroke: #FAF9F7
+  fill: #F2EFEB
 
