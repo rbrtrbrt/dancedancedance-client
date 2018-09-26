@@ -71,3 +71,5 @@ dist/
 
 # MSOffice temp files
 ~$*
+
+.vscode/*
