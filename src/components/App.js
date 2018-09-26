@@ -1,6 +1,9 @@
 import React, { Fragment } from "react";
 // import * as mx from "mobx";
-import { observer } from 'mobx-react';
+import { observer } from "mobx-react";
+
+import DevTools from "mobx-react-devtools";
+import makeInspectable from "mobx-devtools-mst";
 
 import { Spring } from "react-spring";
 import mousetrap from "mousetrap";
@@ -10,10 +13,11 @@ import { detect } from "detect-browser";
 const currentBrowser = detect();
 console.log("BROWSER:", currentBrowser);
 
-import { BlockModel } from '../state-tree/BlockModel';
-window.myBlock = BlockModel.create({ x: 100, y: 100 })
+import { BlockModel } from "../state-tree/BlockModel";
+import ll from "../helpers/ll";
 
-
+window.myBlock = BlockModel.create({ anchor: { x: 100, y: 100 }});
+makeInspectable(window.myBlock);
 /*
 ███    ███  ██████  ██████  ███████ ██      ███████
 ████  ████ ██    ██ ██   ██ ██      ██      ██
@@ -61,11 +65,17 @@ Blocks and Fields are 'canvas dwellers'
 
 */
 
-const BlockBackground = ({width,height}) => {
-return <svg width={width+30} height={height+30} viewBox={`-15 -10 ${width+30} ${height+30}`} style={{position: "absolute",top:"-10px",left:"-15px"}} fill="none" xmlns="http://www.w3.org/2000/svg">
+const BlockBackground = ({ width, height, hover }) => {
+  const extend = 30;
+  const extendedWidth = width + extend;
+  const extendedHeight = height + extend;
+  const offsetX = -extend/2;
+  const offsetY = -extend/3;
+  const shadowStdDev = hover ? 4 : 2;
+  return <svg width={extendedWidth} height={extendedHeight} viewBox={`${offsetX} ${offsetY} ${extendedWidth} ${extendedHeight}`} style={{ position: "absolute", top: offsetX, left: offsetY }} fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs>
-      <filter id="shadow" height="200%" width="200%" filterUnits="userSpaceOnUse">
-          <feDropShadow dx="0" dy="1" stdDeviation="2" floodOpacity="0.25" />
+        <filter id="shadow" height="200%" width="200%" filterUnits="userSpaceOnUse">
+          <feDropShadow dx="0" dy={shadowStdDev/ 2} stdDeviation={shadowStdDev} floodOpacity="0.25" />
         </filter>
       </defs>
       <rect className="block-background-light" width={width} height={height} rx="5" style={{ filter: "url(#shadow)" }} />
@@ -79,16 +89,19 @@ return <svg width={width+30} height={height+30} viewBox={`-15 -10 ${width+30} ${
 //=                                                     =
 //=======================================================
 
-const BasicBlockUI = ({xx,yy,model}) => {
-  return <div className="block" style={{ top: yy, left: xx }}>
-      <BlockBackground width={model.width} height={model.height} />
-    </div>;
-};
-// make it animate its position 
-const AnimBlockUI = ({model}) => 
+const BasicBlockUI = observer(({ xx, yy, model }) => {
+  return (
+    <div className="block" style={{ top: yy, left: xx }} onPointerDown={model.startDrag} >
+      <BlockBackground width={model.width} height={model.height} hover={model.isDragging}/>
+    </div>
+  );
+});
+// make it animate its position
+const AnimBlockUI = ({ model }) => (
   <Spring to={{ xx: model.x, yy: model.y }}>
-  { anim => <BasicBlockUI model={model} xx={anim.xx} yy={anim.yy} />}
+    {anim => <BasicBlockUI model={model} xx={anim.xx} yy={anim.yy} />}
   </Spring>
+);
 // make it MobX observer
 const BlockUI = observer(AnimBlockUI);
 
@@ -99,15 +112,16 @@ const BlockUI = observer(AnimBlockUI);
 //=======================================================
 
 const EditorPane = props => {
-  return (
-    <div className="editor">
+  return <div className="editor">
       <BlockUI model={myBlock} />
-    </div>
-  );
+    </div>;
 };
 
 const App = props => {
-  return <EditorPane />;
+  return <Fragment>
+      <DevTools />
+      <EditorPane />
+    </Fragment>;
 };
 
 export default App;
