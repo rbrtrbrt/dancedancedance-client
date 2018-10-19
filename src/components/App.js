@@ -20,7 +20,8 @@ import { DraggingBlock, BlockUI, BlockSVGFilters } from "./BlockUI";
 
 import { MobxBar, MobxStatus } from '../helpers/debug/mobxBar';
 import { mouseTracker } from '../helpers/mouseTracker'
-import ll from "../helpers/debug/ll";
+
+window.noLogging = false
 
 /*
 ███    ███  ██████  ██████  ███████ ██      ███████

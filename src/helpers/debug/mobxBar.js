@@ -4,9 +4,20 @@ import ReactDOM from "react-dom";
 // import * as mx from "mobx";
 import { observer } from "mobx-react";
 
-let barNode = document.getElementById("mobxBar")
+let barNode;
 const statusNodes = {}
 
+function ensureMobxBar() {
+  if(window.noLogging) {
+    return
+  }
+  barNode = document.getElementById("_mobxBar_")
+  if(!barNode) {
+    barNode = document.createElement("div");
+    barNode.id="_mobxBar_"
+    document.body.append(barNode) 
+  }
+}
 
 function processParams(fs) {
   if( !Array.isArray(fs) ) {
@@ -45,12 +56,12 @@ function processParams(fs) {
   return toPrint;
 }
 
-
 @observer
-export class MobxStatus extends React.Component {
+class RealMobxStatus extends React.Component {
   constructor(props) {
     super(props);
     this.name = this.props.name +":"+ Math.floor(Math.random()*1000)
+    ensureMobxBar()
   }
   render() {
     const items = processParams( this.props.children );
@@ -81,3 +92,13 @@ export class MobxStatus extends React.Component {
     delete statusNodes[this.name]
   }
 }
+
+export class MobxStatus extends React.Component {
+  constructor(props) {
+    super(props);
+  }
+  render() {
+      return !window.noLogging ? <RealMobxStatus {...this.props} /> : null;
+  }
+}
+

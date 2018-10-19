@@ -1,5 +1,16 @@
 export default function ll(msg,...fs) {
-
+  const anonFunctionRegex = /^\s*\(?\s*(\w*)\s*\)?\s*=>\s*(.*)/
+  if(window.noLogging) {
+    if(fs.length>=1){
+      if(typeof fs[0] === "function" && anonFunctionRegex.test(fs[0].toString())) {
+        return fs[0]()
+      } else {
+        return f
+      }
+    } else {
+      return
+    }
+  }
   let stack = new Error().stack
   let re = /^.*?\n.*?\n\s+at ([\w$./]+)|^.*?\n([\w$]+)/
   let aRegexResult = re.exec(new Error().stack)
@@ -36,7 +47,7 @@ export default function ll(msg,...fs) {
 }
 window.ll = ll;
 
-function pr(str) {
+export function pr(str) {
   str = str.replace(/\n/g,"\\n");
   str = str.replace(/\t/g,"\\t");
   str = str.replace(/ /g,"~");
@@ -44,8 +55,14 @@ function pr(str) {
 }
 
 export const gg = function gg(label) {
+  if(window.noLogging) {
+    return
+  }
   console.group(label)
 }
 export const ge = function ge() {
+  if(window.noLogging) {
+    return
+  }
   console.groupEnd()
 }
