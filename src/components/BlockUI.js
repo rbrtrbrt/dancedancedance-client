@@ -56,13 +56,20 @@ BlockBackground.displayName = "BlockBackground"
 //=                                                     =
 //=======================================================
 
-let BasicBlockUI = ({ xx, yy, blockInfo, isGhost }) => {
+let BasicBlockUI = ({ xx, yy, blockInfo, isGhost, isDragged }) => {
   const bi = blockInfo
   const classes = classnames("block", {ghost:isGhost});
+  const style = {width: bi.width, height:bi.height}
+  if(isDragged) {
+    style.transform = "translate(" + xx + "px," + yy + "px)"
+  } else {
+    style.left = xx
+    style.top = yy
+  }
   return (
-    <div className={classes} style={{ top: yy, left: xx, width: bi.width, height:bi.height}} >
+    <div className={classes} style={style} >
       <BlockBackground width={bi.width} height={bi.height} 
-                       hover={bi.dragState !== "notDragging"} 
+                       hover={isDragged} 
                        startDrag={bi.startDrag}
                        isGhost={isGhost} />
       <div className="header" >I am {bi.name}</div>
@@ -79,7 +86,7 @@ export let DraggingBlock = ({ blockInfo }) => {
   switch(bi.dragState) {
     case "dragging:BeforeCorrect":
       return ReactDOM.createPortal(
-        <BasicBlockUI blockInfo={bi} xx={dragX-bi.dragCorrectionX-2} yy={dragY-bi.dragCorrectionY-2} />, 
+        <BasicBlockUI blockInfo={bi} xx={dragX-bi.dragCorrectionX-2} yy={dragY-bi.dragCorrectionY-2} isDragged/>, 
         document.getElementById("dndPlane"));
     case "dragging:Correcting":
       return ReactDOM.createPortal(
@@ -90,14 +97,14 @@ export let DraggingBlock = ({ blockInfo }) => {
                 onRest={bi.correctionRest}>
           {animProps => {
             return <Observer>
-                      {()=><BasicBlockUI blockInfo={bi} xx={dragX+animProps.xx-2} yy={dragY+animProps.yy-2} />}
+                      {()=><BasicBlockUI blockInfo={bi} xx={dragX+animProps.xx-2} yy={dragY+animProps.yy-2}  isDragged/>}
                     </Observer>;
           }}  
         </Spring>, 
         document.getElementById("dndPlane"));
     case "dragging":
       return ReactDOM.createPortal(
-        <BasicBlockUI blockInfo={bi} xx={dragX-2} yy={dragY-2} />, 
+        <BasicBlockUI blockInfo={bi} xx={dragX-2} yy={dragY-2}  isDragged/>, 
         document.getElementById("dndPlane")
       );
     default: throw new Error(`unexpected dragState for block "${bi.name}": ${bi.dragState}`)
