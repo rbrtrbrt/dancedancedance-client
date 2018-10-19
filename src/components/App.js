@@ -82,7 +82,7 @@ let EditorPanel = ({editPanelInfo}) => {
     const panel = editPanelInfo
     return <div className="editorPanel" ref={panel.measureRef} onWheel={panel.handleWheel} 
                 style={{backgroundPositionX: panel.viewportX,backgroundPositionY: panel.viewportY}}>
-      <div className="canvasView" style={{left:panel.viewportX,top:panel.viewportY}}>
+      <div className="canvasView" style={{transform: `translate(${panel.viewportX}px, ${panel.viewportY}px)`}}>
         { panel.canvas.blocks.map( blockInfo => <BlockUI blockInfo={blockInfo} key={blockInfo.name}/> ) }
       </div>
     </div>;

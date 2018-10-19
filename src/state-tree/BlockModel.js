@@ -180,7 +180,6 @@ export const CanvasModel = ty.model("CanvasModel", {
             ll(12,(scale) => e.deltaY * 0.01, ()=>e.deltaMode )
           } else {
             // Your trackpad X and Y positions
-            ll(21, (deltaXY)=> [e.deltaX, e.deltaY], ()=>e.deltaMode);
             self.viewportX += e.deltaX
             self.viewportY += e.deltaY
           }
