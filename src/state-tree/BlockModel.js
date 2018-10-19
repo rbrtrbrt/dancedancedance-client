@@ -98,7 +98,7 @@ export const BlockModel = ty.model("Block", {
         }, 
         endDrag(x,y) {
           _whenDisposer();
-          ll(11,()=>mst.getParentOfType(self,CanvasModel)).moveBlockToTop(self);
+          mst.getParentOfType(self,CanvasModel).moveBlockToTop(self);
           self.anchor.moveTo(x,y);
           _dragCorrectionX = null;
           _dragCorrectionY = null;
@@ -127,10 +127,8 @@ export const CanvasModel = ty.model("CanvasModel", {
           blocks.push(block)
         },
         moveBlockToTop(block) {
-          ll("before:", ()=>self.blocks)
           const idx = self.blocks.indexOf(block);
           mxu.moveItem(self.blocks,idx,self.blocks.length-1)
-          ll("after:", ()=>self.blocks)
         }
       }
     }

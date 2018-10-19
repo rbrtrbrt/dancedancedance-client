@@ -80,12 +80,15 @@ Blocks and Fields are 'canvas dwellers'
 
 let EditorPanel = ({editPanelInfo}) => { 
     const panel = editPanelInfo
-    return <div className="editorPanel" ref={panel.measureRef} onWheel={panel.handleWheel} 
-                style={{backgroundPositionX: panel.viewportX,backgroundPositionY: panel.viewportY}}>
-      <div className="canvasView" style={{transform: `translate(${panel.viewportX}px, ${panel.viewportY}px)`}}>
-        { panel.canvas.blocks.map( blockInfo => <BlockUI blockInfo={blockInfo} key={blockInfo.name}/> ) }
+    const isDragPanel = panel === mouseTracker.dragPanel
+    const bgClasses = classnames("editorPanelBackground", {isDragPanel})
+    return <div className={"editorPanel"} ref={panel.measureRef} onWheel={panel.handleWheel}>
+        <div className={bgClasses}
+                  style={{backgroundPositionX: panel.viewportX,backgroundPositionY: panel.viewportY}}/>
+        <div className="canvasView" style={{transform: `translate(${panel.viewportX}px, ${panel.viewportY}px)`}}>
+          { panel.canvas.blocks.map( blockInfo => <BlockUI blockInfo={blockInfo} key={blockInfo.name}/> ) }
+        </div>
       </div>
-    </div>;
 };
 EditorPanel.displayName = "EditorPanel";
 EditorPanel = observer(EditorPanel);
