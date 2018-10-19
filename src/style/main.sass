@@ -1,0 +1,112 @@
+  
+body.noSelect
+  -webkit-user-select: none; 
+  -moz-user-select: none;     
+  user-select: none;          
+  
+#react-root
+  font-family: "Barlow"
+  font-weight: 400
+  background-color: #080314
+  width: 100vw
+  height: 100vh
+  display: grid
+  grid-template-columns: 100px [editor-start] 1fr
+  grid-template-rows: 50px [editor-start] 1fr 20px
+
+#dndPlane
+  position: fixed
+  left: 0px
+  top: 0px
+  width: 100vw
+  height: 100vh
+  background-color: transparent
+  z-index: 99
+  pointer-events: none
+
+.editorArea
+  grid-column: editor-start
+  grid-row: editor-start
+  display: flex
+  align-items: stretch
+
+.editorPanel
+  background-image: url("../../img/background.png")
+  background-color: yellow
+  position: relative
+  overflow: hidden
+  flex-grow: 1;
+
+.editorPanel:nth-child(1)
+  border-right: 1px solid blue
+  resize: horizontal
+  flex-grow: 0;
+  width: 50%;
+
+.canvasView 
+  position: absolute
+  overflow: visible
+  left: 0
+  top: 0
+  right: 0
+  bottom: 0
+
+
+/**  Block  **/
+
+.block 
+  position: absolute
+  pointer-events: none
+
+  .header 
+    position: absolute
+    top: 3px
+    left: 23px
+    font-family: "Barlow"
+    font-size: 14px
+    color: var(--blockFontColor)
+
+  .blockBackgroundLight 
+    fill: var(--blockBackground_light)
+    pointer-events: auto
+
+  .blockBackgroundDarker
+    stroke: var(--blockBackground_light)
+    fill: var(--blockBackground)
+    pointer-events: auto
+
+  .blockBackgroundShadow
+    fill: var(--blockBackground_light)
+
+.block.ghost
+  .header 
+    color: var(--blockFontColor_ghost)
+  .blockBackgroundLight 
+    fill: var(--blockBackground_ghost_light)
+
+  .blockBackgroundDarker
+    stroke: var(--blockBackground_ghost_light)
+    fill: var(--blockBackground_ghost)
+
+  .blockBackgroundShadow
+    fill: var(--blockBackground_ghost_light)
+
+  
+  //////////////////////////////////
+
+#mobxBar
+  font-family: "Barlow Condensed"
+  font-size: 14px
+  position: fixed
+  bottom: 0
+
+.mobxStatus 
+  background-color: lightgreen
+  display: inline-block
+  padding-left: 3px
+  padding-right: 3px
+  margin-right: 4px;
+
+.mobxStatus .name
+  color: #666666
+  font-style: italic

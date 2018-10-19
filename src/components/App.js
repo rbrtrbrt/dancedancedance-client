@@ -1,23 +1,27 @@
 import React, { Fragment } from "react";
+import ReactDOM from "react-dom";
+
 // import * as mx from "mobx";
 import { observer } from "mobx-react";
 
 import DevTools from "mobx-react-devtools";
-import makeInspectable from "mobx-devtools-mst";
 
 import { Spring } from "react-spring";
 import mousetrap from "mousetrap";
 import classnames from "classnames";
 
-import { detect } from "detect-browser";
-const currentBrowser = detect();
-console.log("BROWSER:", currentBrowser);
 
-import { BlockModel } from "../state-tree/BlockModel";
-import ll from "../helpers/ll";
+// import { detect } from "detect-browser";
+// const currentBrowser = detect();
+// console.log("BROWSER:", currentBrowser);
 
-window.myBlock = BlockModel.create({ anchor: { x: 100, y: 100 }});
-makeInspectable(window.myBlock);
+import { appModel } from "../state-tree/BlockModel";
+import { DraggingBlock, BlockUI, BlockSVGFilters } from "./BlockUI";
+
+import { MobxBar, MobxStatus } from '../helpers/debug/mobxBar';
+import { mouseTracker } from '../helpers/mouseTracker'
+import ll from "../helpers/debug/ll";
+
 /*
 ███    ███  ██████  ██████  ███████ ██      ███████
 ████  ████ ██    ██ ██   ██ ██      ██      ██
@@ -65,45 +69,6 @@ Blocks and Fields are 'canvas dwellers'
 
 */
 
-const BlockBackground = ({ width, height, hover }) => {
-  const extend = 30;
-  const extendedWidth = width + extend;
-  const extendedHeight = height + extend;
-  const offsetX = -extend/2;
-  const offsetY = -extend/3;
-  const shadowStdDev = hover ? 4 : 2;
-  return <svg width={extendedWidth} height={extendedHeight} viewBox={`${offsetX} ${offsetY} ${extendedWidth} ${extendedHeight}`} style={{ position: "absolute", top: offsetX, left: offsetY }} fill="none" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <filter id="shadow" height="200%" width="200%" filterUnits="userSpaceOnUse">
-          <feDropShadow dx="0" dy={shadowStdDev/ 2} stdDeviation={shadowStdDev} floodOpacity="0.25" />
-        </filter>
-      </defs>
-      <rect className="block-background-light" width={width} height={height} rx="5" style={{ filter: "url(#shadow)" }} />
-      <rect className="block-background-darker" x="20.5" y="0.5" width={width - 21} height={height - 1} rx="5" />
-    </svg>;
-};
-
-//=======================================================
-//=                                                     =
-//=   BlockUI                                           =
-//=                                                     =
-//=======================================================
-
-const BasicBlockUI = observer(({ xx, yy, model }) => {
-  return (
-    <div className="block" style={{ top: yy, left: xx }} onPointerDown={model.startDrag} >
-      <BlockBackground width={model.width} height={model.height} hover={model.isDragging}/>
-    </div>
-  );
-});
-// make it animate its position
-const AnimBlockUI = ({ model }) => (
-  <Spring to={{ xx: model.x, yy: model.y }}>
-    {anim => <BasicBlockUI model={model} xx={anim.xx} yy={anim.yy} />}
-  </Spring>
-);
-// make it MobX observer
-const BlockUI = observer(AnimBlockUI);
 
 //=======================================================
 //=                                                     =
@@ -111,17 +76,54 @@ const BlockUI = observer(AnimBlockUI);
 //=                                                     =
 //=======================================================
 
-const EditorPane = props => {
-  return <div className="editor">
-      <BlockUI model={myBlock} />
+
+let EditorPanel = ({editPanelInfo}) => { 
+    const panel = editPanelInfo
+    return <div className="editorPanel" ref={panel.measureRef} onWheel={panel.handleWheel} 
+                style={{backgroundPositionX: panel.viewportX,backgroundPositionY: panel.viewportY}}>
+      <div className="canvasView" style={{left:panel.viewportX,top:panel.viewportY}}>
+        { panel.canvas.blocks.map( blockInfo => <BlockUI blockInfo={blockInfo} key={blockInfo.name}/> ) }
+      </div>
     </div>;
 };
+EditorPanel.displayName = "EditorPanel";
+EditorPanel = observer(EditorPanel);
 
-const App = props => {
+let App = ({appInfo}) => {
+  const m = mouseTracker
+  let editors = [appInfo.editor1,appInfo.editor2] 
+  let stats = editors.map( e => {
+    return <MobxStatus name={e.name} key={e.name}>
+      {(vpx)=>e.viewportX}
+      {(vpy)=>e.viewportY}
+    </MobxStatus>
+  })
+  stats = stats.concat( appInfo.canvas.blocks.map( b => {
+    return <MobxStatus name={b.name}  key={b.name}>
+      {(x)=>b.x}
+      {(y)=>b.y}
+      {b.dragState}
+    </MobxStatus>
+  }))
+  const qqq = mouseTracker.dragItem ? <DraggingBlock blockInfo={mouseTracker.dragItem}/> : null
   return <Fragment>
+      <BlockSVGFilters/>
+      <div className="editorArea">
+        <EditorPanel editPanelInfo={appInfo.editor1}/>
+        <EditorPanel editPanelInfo={appInfo.editor2}/>
+      </div>
+      { mouseTracker.dragItem ? <DraggingBlock blockInfo={mouseTracker.dragItem}/> : null }
       <DevTools />
-      <EditorPane />
+      <MobxStatus name="mouse">
+        {(x)=>m.mouseX}
+        {(y)=>m.mouseY}
+      </MobxStatus>
+      {stats}
     </Fragment>;
 };
+App.displayName = "App";
+App = observer(App);
 
-export default App;
+export default ()=><App appInfo={appModel}/>;
+
+

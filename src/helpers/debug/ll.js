@@ -16,10 +16,12 @@ export default function ll(msg,...fs) {
     if(typeof f !== "function") {
       list.push(f)
     } else {
-      const anonFunctionRegex = /^\s*\(\s*\)\s*=>\s*(.*)/
+      const anonFunctionRegex = /^\s*\(?\s*(\w*)\s*\)?\s*=>\s*(.*)/
+      // const anonFunctionRegex = /^\s*\(\s*\)\s*=>\s*(.*)/
       const match = anonFunctionRegex.exec(f.toString())
       if(match) {
-        list.push(match[1] + " →")
+        const label = match[1] !== '' ? match[1] : match[2]
+        list.push(label + " →")
         list.push(f())
         if(index == 0) result = f();
       } else {

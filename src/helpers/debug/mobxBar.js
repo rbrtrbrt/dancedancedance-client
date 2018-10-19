@@ -1,0 +1,83 @@
+import React, { Fragment } from "react";
+import ReactDOM from "react-dom";
+
+// import * as mx from "mobx";
+import { observer } from "mobx-react";
+
+let barNode = document.getElementById("mobxBar")
+const statusNodes = {}
+
+
+function processParams(fs) {
+  if( !Array.isArray(fs) ) {
+    fs = [fs]
+  }
+  let keyNum = 0;
+  let toPrint = fs.reduce( (list,f,index) => {
+    let value;
+    if(typeof f !== "function") {
+      value = f
+    } else {
+      const anonFunctionRegex = /^\s*\(?\s*(\w*)\s*\)?\s*=>\s*(.*)/
+      const match = anonFunctionRegex.exec(f.toString())
+      if(match) {
+        const label = match[1] !== '' ? match[1] : match[2]
+        list.push(<span className="name" key={keyNum++}>{label} </span>)
+        value = f();
+      } else {
+        value = f
+      }
+    }
+    if(typeof value === "string") {
+      value = '"'+value +'"'
+    }
+    if( Array.isArray(value)) {
+      value = "["+value.toString()+"]"
+    }
+    value = value === undefined ? "undefined" : value
+    value = value === null ? "null" : value
+    value = value.toString()
+    if(window.doll) {
+    }
+    list.push(<span className="value" key={keyNum++}>{value} </span>)
+    return list
+  }, [])
+  return toPrint;
+}
+
+
+@observer
+export class MobxStatus extends React.Component {
+  constructor(props) {
+    super(props);
+    this.name = this.props.name +":"+ Math.floor(Math.random()*1000)
+  }
+  render() {
+    const items = processParams( this.props.children );
+    if( statusNodes[this.name] ) {
+      return ReactDOM.createPortal(
+        <span className="title"><b>{this.props.name}: </b>{items}</span>,
+        statusNodes[this.name]
+      );  
+    } else {
+      ll("statusNode unfound for ", this.name)
+      return null;
+    }
+  }
+  componentWillMount() {
+    let node = statusNodes[this.name]
+    if(node) {
+      barNode.removeChild(node);
+      delete statusNodes[this.name]
+    }
+    node = document.createElement("div")
+    node.classList.add("mobxStatus")
+    barNode.appendChild(node)
+    statusNodes[this.name] = node
+  }
+  componentWillUnmount() {
+    let node = statusNodes[this.name]
+    barNode.removeChild(node);
+    delete statusNodes[this.name]
+  }
+}

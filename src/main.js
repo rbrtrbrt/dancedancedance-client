@@ -1,7 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 
-import './main.sass';
+import './style/default';
+import './style/main.sass';
 
 import App from './components/App';
 
