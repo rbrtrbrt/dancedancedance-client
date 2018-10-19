@@ -6,10 +6,6 @@
 
 import {observable, computed, action} from "mobx";
 
-import hamstr from 'hamsterjs';
-import ll from "./debug/ll";
-
-ll("HAMSTR:", hamstr);
 class MouseTracker {
 
   @observable dndPanels = [];
