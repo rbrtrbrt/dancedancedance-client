@@ -104,7 +104,11 @@ export const BlockModel = ty.model("Block", {
         endDrag(x,y) {
           _whenDisposer();
           mst.getParentOfType(self,CanvasModel).moveBlockToTop(self);
-          self.anchor.moveTo(x,y);
+          if(self.dragState === "dragging:BeforeCorrect") {
+            self.anchor.moveTo(x-_dragCorrectionX,y-_dragCorrectionY);
+          } else {
+            self.anchor.moveTo(x,y);
+          }
           _dragCorrectionX = null;
           _dragCorrectionY = null;
           self.dragState = "notDragging"
