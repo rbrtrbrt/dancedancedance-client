@@ -32,19 +32,12 @@ window.noLogging = false
 */
 
 /*
-We want editors to have multiple views on page. Even very small views
-should be  supported, and dnd from other webpages. (The pallette could,
-conceivibly, be just another web-page, mixing available blocks with
-explanation or other UI) Editor views on a page share the location of the
-mouse-cursor, needed to  support intelligent drag and drop interactions.
-
 A Block has several Fields. Fields can be 'inline' (text, number,select,
 reference), 'flag' (bool), 'container' for other blocks or `compound` (grouping
 other fields). Fields can be required, required with (calculated) default,
 strong optional (visible, but deletable) or weak optional (initially not
 visible). Fields can have multiplicity: one, one-or-more, possibly bounded?
 A field always has a name.
-
 
 Blocks do not enforce a strict sequencing of inline fields. There is a 'defined'
 or 'canonical' sequence, which can be attained using a clean-up command.
