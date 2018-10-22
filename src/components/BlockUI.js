@@ -72,7 +72,7 @@ let BasicBlockUI = ({ xx, yy, blockInfo, isGhost, isDragged }) => {
                        hover={isDragged} 
                        startDrag={bi.startDrag}
                        isGhost={isGhost} />
-      <div className="header" >I am {bi.name}</div>
+      {header}
     </div>
   );
 };
@@ -107,7 +107,7 @@ export let DraggingBlock = ({ blockInfo }) => {
         <BasicBlockUI blockInfo={bi} xx={dragX-2} yy={dragY-2}  isDragged/>, 
         document.getElementById("dndPlane")
       );
-    default: throw new Error(`unexpected dragState for block "${bi.name}": ${bi.dragState}`)
+    default: throw new Error(`unexpected dragState for block "${bi.debugName}": ${bi.dragState}`)
   }
 };
 DraggingBlock.displayName="DraggingBlock"

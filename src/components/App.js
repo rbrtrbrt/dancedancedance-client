@@ -66,8 +66,6 @@ block that "matches" the field most closely. Dropping a field on another field
 could copy just the value?
 
 Blocks and Fields are 'canvas dwellers'
-
-
 */
 
 
@@ -86,7 +84,7 @@ let EditorPanel = ({editPanelInfo}) => {
         <div className={bgClasses}
                   style={{backgroundPositionX: panel.viewportX,backgroundPositionY: panel.viewportY}}/>
         <div className="canvasView" style={{transform: `translate(${panel.viewportX}px, ${panel.viewportY}px)`}}>
-          { panel.canvas.blocks.map( blockInfo => <BlockUI blockInfo={blockInfo} key={blockInfo.name}/> ) }
+          { panel.canvas.blocks.map( blockInfo => <BlockUI blockInfo={blockInfo} key={blockInfo.debugName}/> ) }
         </div>
       </div>
 };
@@ -97,13 +95,13 @@ let App = ({appInfo}) => {
   const m = mouseTracker
   let editors = [appInfo.editor1,appInfo.editor2] 
   let stats = editors.map( e => {
-    return <MobxStatus name={e.name} key={e.name}>
+    return <MobxStatus name={e.debugName} key={e.debugName}>
       {(vpx)=>e.viewportX}
       {(vpy)=>e.viewportY}
     </MobxStatus>
   })
   stats = stats.concat( appInfo.canvas.blocks.map( b => {
-    return <MobxStatus name={b.name}  key={b.name}>
+    return <MobxStatus name={b.debugName}  key={b.debugName}>
       {(x)=>b.x}
       {(y)=>b.y}
       {b.dragState}

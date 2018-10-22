@@ -34,7 +34,7 @@ const BlockAttach = ty.model("BlockAttach", {
 })
 
 export const BlockModel = ty.model("Block", {
-    name: ty.maybe(ty.string),
+    debugName: ty.maybe(ty.string),
     anchor: ty.union(BlockOnCanvas, BlockAttach),
     dragState: ty.optional(ty.enumeration("dragState",["notDragging", "dragging:BeforeCorrect","dragging:Correcting","dragging"]), "notDragging"),
   })
@@ -62,18 +62,23 @@ export const BlockModel = ty.model("Block", {
           if( self.dragState !== "notDragging" ) {
             return _dragCorrectionX
           } else {
-            throw new Error(`Can't get dragCorrectionX of ${self.name} with dragState ${self.dragState}`)
+            throw new Error(`Can't get dragCorrectionX of ${self.debugName} with dragState ${self.dragState}`)
           }
         },
         get dragCorrectionY() {
           if( self.dragState !== "notDragging" ) {
             return _dragCorrectionY
           } else {
-            throw new Error(`Can't get dragCorrectionY of ${self.name} with dragState ${self.dragState}`)
+            throw new Error(`Can't get dragCorrectionY of ${self.debugName} with dragState ${self.dragState}`)
           }
         },
       }, 
       actions: {
+        afterCreate() {
+          if(self.debugName == undefined) {
+            self.debugName = newId("block")
+          }
+        },
         grow(dw, dh) {
           self._width += dw;
           self._height += dh;
@@ -104,11 +109,6 @@ export const BlockModel = ty.model("Block", {
           _dragCorrectionY = null;
           self.dragState = "notDragging"
         }, 
-        afterCreate() {
-          if(self.name == undefined) {
-            self.name = newId("block")
-          }
-        }
       } 
     };
   });
@@ -135,7 +135,7 @@ export const CanvasModel = ty.model("CanvasModel", {
   })
   
   export const EditorModel = ty.model("EditorModel", {
-    name: ty.maybe(ty.string),
+    debugName: ty.maybe(ty.string),
     canvas: ty.reference(CanvasModel),
     viewportX: ty.optional(ty.number,0),
     viewportY: ty.optional(ty.number,0)
@@ -157,8 +157,8 @@ export const CanvasModel = ty.model("CanvasModel", {
       },
       actions: {
         afterCreate() {
-          if(self.name == undefined) {
-            self.name = newId("editor")
+          if(self.debugName == undefined) {
+            self.debugName = newId("editor")
           }
         },
         refreshClientRect() {
@@ -185,9 +185,6 @@ export const CanvasModel = ty.model("CanvasModel", {
       }
     }
   })
-
-
-
 
   export const AppModel = ty.model("AppModel", {
     editor1: EditorModel,
