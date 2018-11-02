@@ -1,19 +1,23 @@
-import React from 'react';
-
 import * as mx from "mobx";
 import * as mxu from "mobx-utils";
 import * as mxr from "mobx-react";
-import makeInspectable from "mobx-devtools-mst";
+import { setLogEnabled } from "mobx-react-devtools";
 
 import * as mst from "mobx-state-tree";
 const ty = mst.types;
 
-import { mouseTracker } from "../helpers/mouseTracker";
+import { uiTracker } from "../helpers/UITracker";
 import { offsetFromDocument, vectorLength,rectContainsPoint } from "../helpers/measure";
 
 import { newId } from "../helpers/idMaker";
-import { setLogEnabled } from "mobx-react-devtools";
-import ll from '../helpers/debug/ll';
+import cuid from "cuid";
+
+import { InputFieldModel } from '../state-tree/FieldModel';
+import { CanvasModel } from '../state-tree/CanvasModel';
+
+import { theme } from "../style/defaultStyleParams";
+
+import { ll, gg, ge } from '../helpers/debug/ll';
 
 const BlockOnCanvas = ty.model("BlockOnCanvas", {
   x: ty.number,  // canvas coord
@@ -30,33 +34,43 @@ const BlockOnCanvas = ty.model("BlockOnCanvas", {
 }))
 
 const BlockAttach = ty.model("BlockAttach", {
-  // connected: BlockModel
+  parentBlock: ty.reference(ty.late(()=>BlockModel))
 })
 
 export const BlockModel = ty.model("Block", {
     debugName: ty.maybe(ty.string),
+    id: ty.identifier,
+    title: ty.maybe(ty.string),
     anchor: ty.union(BlockOnCanvas, BlockAttach),
     dragState: ty.optional(ty.enumeration("dragState",["notDragging", "dragging:BeforeCorrect","dragging:Correcting","dragging"]), "notDragging"),
+    fields: ty.array(ty.union(InputFieldModel))
   })
   .extend(self => {
-    const _width = 300;
-    const _height = 40;
+    const _headerSize = mx.observable({
+      width: 300,
+      height: 40,
+    })
+    let _hasFocus = false;
     let _dragCorrectionX = null;
     let _dragCorrectionY = null;
     let _whenDisposer = null;
     return { 
       views: { 
         get width() {
-          return _width;
+          return theme.blockLeftTabWidth + _headerSize.width + theme.blockContentMargin * 2;
         },
         get height() {
-          return _height;
+          return _headerSize.height + theme.blockContentMargin * 2;
         },
         get x() {
           return self.anchor.x
         },
         get y() {
           return self.anchor.y
+        },
+        get blockTitle() {
+          ll(1, ()=> self.title, ()=> self.debugName)
+          return self.title || self.debugName
         },
         get dragCorrectionX() {
           if( self.dragState !== "notDragging" ) {
@@ -78,11 +92,20 @@ export const BlockModel = ty.model("Block", {
           if(self.debugName == undefined) {
             self.debugName = newId("block")
           }
+          if(self.id == undefined) {
+            self.id = cuid();
+          }
         },
-        grow(dw, dh) {
-          self._width += dw;
-          self._height += dh;
-        }, 
+        newHeaderSize(newWidth, newHeight) {
+          _headerSize.width = newWidth;
+          _headerSize.height = newHeight;
+        },
+        setFocus(hasFocus) {
+          _hasFocus = hasFocus;
+        },
+        moveToTop() {
+          mst.getParentOfType(self,CanvasModel).moveBlockToTop(self);
+        },
         // called when drag distance > 3
         startDragCorrecting() {
           self.dragState = "dragging:Correcting"; 
@@ -92,13 +115,13 @@ export const BlockModel = ty.model("Block", {
           self.dragState = "dragging";
         },
         startDrag(evt) {
-          let [x,y] = mouseTracker.startDrag(evt, self);
+          let [x,y] = uiTracker.startDrag(evt, self);
           _dragCorrectionX = x - self.anchor.x
           _dragCorrectionY = y - self.anchor.y
           self.dragState = "dragging:BeforeCorrect"
           _whenDisposer = mx.when( ()=> {
             return self.dragState === "dragging:BeforeCorrect" && 
-                   vectorLength(mouseTracker.dragDeltaX,mouseTracker.dragDeltaY) > 3
+                   vectorLength(uiTracker.dragDeltaX, uiTracker.dragDeltaY) > 3
           }, self.startDragCorrecting );
         }, 
         endDrag(x,y) {
@@ -115,116 +138,4 @@ export const BlockModel = ty.model("Block", {
         }, 
       } 
     };
-  });
-
-export const CanvasModel = ty.model("CanvasModel", {
-    id: ty.identifierNumber,
-    blocks: ty.array(BlockModel)
-  }).extend( self => {
-    return {
-      views: {
-        // get extent() {
-        // }
-      },
-      actions: {
-        add(block) {
-          blocks.push(block)
-        },
-        moveBlockToTop(block) {
-          const idx = self.blocks.indexOf(block);
-          mxu.moveItem(self.blocks,idx,self.blocks.length-1)
-        }
-      }
-    }
-  })
-  
-  export const EditorModel = ty.model("EditorModel", {
-    debugName: ty.maybe(ty.string),
-    canvas: ty.reference(CanvasModel),
-    viewportX: ty.optional(ty.number,0),
-    viewportY: ty.optional(ty.number,0)
-  }).extend( self => {
-    const _measureRef = React.createRef();
-    let _clientRect = null;
-
-    return {
-      views: {
-        get measureRef() {
-          return _measureRef;
-        },
-        get clientRect() {
-          return _clientRect;
-        },
-        get containsMouse() {
-          return rectContainsPoint( _clientRect, mouseTracker.mouseX, mouseTracker.mouseY );
-        }
-      },
-      actions: {
-        afterCreate() {
-          if(self.debugName == undefined) {
-            self.debugName = newId("editor")
-          }
-        },
-        refreshClientRect() {
-          if(_measureRef.current) {
-            return _clientRect = offsetFromDocument(_measureRef.current);
-          } else {
-            return undefined;
-          }
-        },
-        clientToCanvas(x,y) {
-          return _clientRect && [x - _clientRect.left - self.viewportX, y - _clientRect.top - self.viewportY ]
-        },
-        handleWheel(e) {
-          e.preventDefault();
-          if (e.ctrlKey) {
-            // Your zoom/scale factor
-            ll(12,(scale) => e.deltaY * 0.01, ()=>e.deltaMode )
-          } else {
-            // Your trackpad X and Y positions
-            self.viewportX += e.deltaX
-            self.viewportY += e.deltaY
-          }
-        }
-      }
-    }
-  })
-
-  export const AppModel = ty.model("AppModel", {
-    editor1: EditorModel,
-    editor2: EditorModel,
-    canvas: CanvasModel
-  }).extend( self => {
-    return {
-      views: {
-        get dndPanels() {
-          return [self.editor1, self.editor2]
-        }
-      },
-      actions: {
-      }
-    }
-  })
-
-
-  export const appModel = AppModel.create({
-    canvas: {
-      id: 12345,
-      blocks: [
-        { anchor: { x: 100, y: 100 } },
-        { anchor: { x: 0, y: 0 } },
-        { anchor: { x: 400, y: 50 } },
-        { anchor: { x: -10, y: 150 } },
-      ]
-    },
-    editor1: {
-      canvas: 12345
-    },
-    editor2: {
-      canvas: 12345
-    }
-  });
-mouseTracker.addDndPanels(...appModel.dndPanels)
-window.app = appModel
-makeInspectable(appModel);
-  
+});

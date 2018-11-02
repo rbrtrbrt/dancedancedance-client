@@ -1,4 +1,4 @@
-export default function ll(msg,...fs) {
+export function ll(msg,...fs) {
   const anonFunctionRegex = /^\s*\(?\s*(\w*)\s*\)?\s*=>\s*(.*)/
   if(window.noLogging) {
     if(fs.length>=1){
@@ -45,7 +45,6 @@ export default function ll(msg,...fs) {
   console.log("%c%s:%c %s:","font-weight:bold;background-color:yellow",sCallerName,"color:#888;", msg,...toPrint)
   return result
 }
-window.ll = ll;
 
 export function pr(str) {
   str = str.replace(/\n/g,"\\n");

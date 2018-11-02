@@ -1,4 +1,3 @@
-import ll from "./debug/ll";
 
 export function offsetFromDocument(domElement) {
   const {top,right,bottom,left,width,height} = domElement.getBoundingClientRect(),

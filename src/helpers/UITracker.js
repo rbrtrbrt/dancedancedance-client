@@ -5,8 +5,13 @@
 */
 
 import {observable, computed, action} from "mobx";
+import { ll, gg, ge } from '../helpers/debug/ll';
 
-class MouseTracker {
+class UITracker {
+
+  constructor() {
+    document.body.addEventListener("pointermove", this.pointerMoved);
+  }
 
   @observable dndPanels = [];
   @observable dndPanelRects = [];
@@ -30,11 +35,17 @@ class MouseTracker {
 
   @observable
   dragPanel = null;
+  @observable
+  mousePanel = null;
+  @observable
+  focusPanel = null;
 
   @action
   refreshPanelRects() {
-    this.dndPanels.forEach( panel => panel.refreshClientRect() )    
-  }
+    this.dndPanels.forEach( panel => {
+      // ll("aaa", ()=>panel)
+      return panel.refreshClientRect()})    
+  } 
   @computed 
   get dndPanelWithMouse() {
     return this.dndPanels.find( panel => panel.containsMouse )
@@ -57,6 +68,10 @@ class MouseTracker {
   @action
   addDndPanels(...panels) {
     panels.forEach(p=>this.dndPanels.push(p))
+  }
+  @action
+  init(appModel) {
+    this.addDndPanels(...appModel.dndPanels)
   }
   @action
   startDrag(evt, model) {
@@ -114,6 +129,4 @@ class MouseTracker {
     return this.mouseY - this.dragPanelClientRect.top;
   }
 }
-export const mouseTracker = new MouseTracker()
-
-document.body.addEventListener("pointermove", mouseTracker.pointerMoved);
+export const uiTracker = new UITracker()

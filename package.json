@@ -20,8 +20,10 @@
     "unexpected": "^10.39.0"
   },
   "dependencies": {
+    "@types/react-dom": "^16.0.9",
     "chroma-js": "^1.4.0",
     "classnames": "^2.2.6",
+    "cuid": "^2.1.4",
     "detect-browser": "^3.0.1",
     "firebase": "^5.5.1",
     "mobx": "^5.1.2",
