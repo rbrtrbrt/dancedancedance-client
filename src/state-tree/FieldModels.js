@@ -12,7 +12,10 @@ import { offsetFromDocument, vectorLength,rectContainsPoint } from "../helpers/m
 import { newId } from "../helpers/idMaker";
 import cuid from "cuid";
  
-export const InputFieldModel = ty.model("InputFieldModel", {
+export const FieldViewModel = ty.model("FieldDocModel", {
+})
+
+export const FieldDocModel = ty.model("FieldDocModel", {
   debugName: ty.maybe(ty.string),
   id: ty.identifier,
   fieldName: ty.string,

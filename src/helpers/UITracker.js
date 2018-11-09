@@ -6,15 +6,19 @@
 
 import {observable, computed, action} from "mobx";
 import { ll, gg, ge } from '../helpers/debug/ll';
-
+export
 class UITracker {
 
-  constructor() {
+  constructor(appViewModel) {
+    if(uiTracker) {
+      throw new Error(`uiTracker already exists. Can only create single instance of UITracker.`);
+    } 
+    uiTracker = this;
     document.body.addEventListener("pointermove", this.pointerMoved);
+    this.app = appViewModel
   }
 
-  @observable dndPanels = [];
-  @observable dndPanelRects = [];
+  app = null;
 
   @observable
   mouseX = 0;
@@ -22,23 +26,18 @@ class UITracker {
   @observable
   mouseY = 0;
 
-  @observable
-  dragStartX = null;
+  drag = observable({
+    startX: null,
+    startY: null,
+    lastDragPanel: null,
+    item: null,
+  })
 
-  @observable
-  dragStartY = null;
-
-  dragPointer = null;
-  
-  @observable
-  dragItem = null;
-
-  @observable
-  dragPanel = null;
-  @observable
-  mousePanel = null;
-  @observable
-  focusPanel = null;
+  @computed 
+  get dndPanels() {
+    // ll(1,()=>this.app,()=>this)
+    return this.app.dndPanels
+  }
 
   @action
   refreshPanelRects() {
@@ -57,76 +56,60 @@ class UITracker {
       this.mouseX = Math.round(evt.x);
       this.mouseY = Math.round(evt.y);
     }
-    if(this.dragItem) {
+    if(this.drag.item) {
       this.dragMove(evt);
     }
   }
   @action
   dragMove(evt) {
-    this.dragPanel = this.dndPanelWithMouse || this.dragPanel;
+    this.drag.lastDragPanel = this.dndPanelWithMouse || this.drag.lastDragPanel;
   }
   @action
   addDndPanels(...panels) {
     panels.forEach(p=>this.dndPanels.push(p))
   }
   @action
-  init(appModel) {
-    this.addDndPanels(...appModel.dndPanels)
-  }
-  @action
   startDrag(evt, model) {
-    this.dragPointer = evt.pointerId;
-    this.dragItem = model;
-    this.dragStartX = this.mouseX = evt.clientX;  
-    this.dragStartY = this.mouseY = evt.clientY;
+    this.drag.pointerId = evt.pointerId;
+    this.drag.item = model;
+    this.drag.startX = this.mouseX = evt.clientX;  
+    this.drag.startY = this.mouseY = evt.clientY;
     this.refreshPanelRects()
-    this.dragPanel = this.dndPanelWithMouse
+    this.drag.lastDragPanel = this.dndPanelWithMouse
     document.body.classList.add("noSelect");
     document.body.addEventListener('pointerup', this.endDrag);
-    document.body.setPointerCapture(this.dragPointer);
-    return this.dragPanel.clientToCanvas(this.dragStartX, this.dragStartY);
+    document.body.setPointerCapture(this.drag.pointerId);
+    return this.drag.lastDragPanel.clientToCanvas(this.drag.startX, this.drag.startY);
   }
   @action.bound
   endDrag(evt) {
     this.mouseX = evt.clientX;
     this.mouseY = evt.clientY;
-    document.body.releasePointerCapture(this.dragPointer);
+    document.body.releasePointerCapture(this.drag.pointerId);
     document.body.removeEventListener( 'pointerup', this.endDrag);
-    document.body.classList.remove("noSelect");;
-    this.dragItem.endDrag(...this.dragPanel.clientToCanvas(this.mouseX, this.mouseY));
-    this.dragItem = null;
-    this.dragPanel = null;
-    this.dragStartX = null;
-    this.dragStartY = null;
-    this.dragPointer = null;
+    document.body.classList.remove("noSelect");
+    this.drag.item.endDrag(...this.drag.lastDragPanel.clientToCanvas(this.mouseX, this.mouseY));
+    this.drag.item = null;
+    this.drag.lastDragPanel = null;
+    this.drag.startX = null;
+    this.drag.startY = null;
+    this.drag.pointerId = null;
   }
   @computed
   get dragDeltaX() {
-    if (this.dragItem) {
-      return this.mouseX - this.dragStartX;
+    if (this.drag.item) {
+      return this.mouseX - this.drag.startX;
     } else {
       throw new Error(`Can't get dragX if not dragging.`)
     }
   }
   @computed
   get dragDeltaY() {
-    if (this.dragItem) {
-      return this.mouseY - this.dragStartY;
+    if (this.drag.item) {
+      return this.mouseY - this.drag.startY;
     } else {
       throw new Error(`Can't get dragY if not dragging.`)
     }
   }
-  @computed 
-  get dragPanelClientRect() {
-    return this.dragPanel.clientRect();
-  }
-  @computed
-  get dragStartPanelX() {
-    return this.mouseX - this.dragPanelClientRect.left;
-  }
-  @computed
-  get dragStartPanelY() {
-    return this.mouseY - this.dragPanelClientRect.top;
-  }
 }
-export const uiTracker = new UITracker()
+export let uiTracker = null;

@@ -31,7 +31,6 @@ export const BlockSVGFilters = () => {
 class BlockBackground extends React.Component {
   displayName = "BlockBackground";
   render() {
-    gg("render BlockBackground")
     const { width, height, hover, isGhost, onStartDrag} = this.props;
     // need to extend the size to prevent clipping of dropshadow
     const extend = 30;
@@ -40,7 +39,6 @@ class BlockBackground extends React.Component {
     const offsetX = -extend/2;
     const offsetY = -extend/3;
     const filterId = hover ? "filter-blockshadow-drag" : "filter-blockshadow"
-    ge()
     return <svg width={extendedWidth} height={extendedHeight} 
                 viewBox={`${offsetX} ${offsetY} ${extendedWidth} ${extendedHeight}`} 
                 style={{ position: "absolute", top: offsetY, left: offsetX }} 
@@ -54,15 +52,10 @@ class BlockBackground extends React.Component {
     }
 };
 
-
 // The core block-component, without any animation logic.
 @observer
 class BasicBlockUI extends React.Component {
   displayName = "BasicBlockUI";
-  constructor(props) {
-    super(props);
-    this.headerRef = React.createRef();
-  }
   measureSize= () => {
     const {width, height} = this.headerRef.current.getBoundingClientRect();
     this.props.blockInfo.newHeaderSize(width, height)
@@ -72,10 +65,8 @@ class BasicBlockUI extends React.Component {
     this.measureSize()
   }
   render(x) {
-    gg("render block")
     const { xx, yy, blockInfo:bi, isGhost, isDragged } = this.props;
     const classes = classnames("block", {ghost:isGhost});
-    // add 10px to width to allow header to grow wider
     const style = {height:bi.height}
     if(isDragged) {
       style.transform = "translate(" + xx + "px," + yy + "px)"
@@ -85,7 +76,7 @@ class BasicBlockUI extends React.Component {
     }
     const fields = bi.fields.map( (field,idx) => {
         return <Fragment key={idx}>
-          {' '}<FieldUI fieldInfo={field} key={field.debugName} onUpdate={this.measureSize} onFocusChange={bi.setFocus}/>
+          {' '}<FieldUI fieldInfo={field} key={field.debugName} onUpdate={this.measureSize} />
         </Fragment>
     })
     // The wierd double-span construct is needed to have the trailing space be subject
@@ -94,7 +85,6 @@ class BasicBlockUI extends React.Component {
       <span><span className="blockTitle">{bi.blockTitle}</span> </span>
       { fields }
     </div>
-    ge()
     return (
       <div className={classes} style={style} onMouseDown={bi.moveToTop}>
         <BlockBackground width={bi.width} height={bi.height} 
@@ -106,7 +96,6 @@ class BasicBlockUI extends React.Component {
     );
   }
 };
-
 
 // This component renders a block that is being dragged. It handles positioning and animation of the
 // dragged block.

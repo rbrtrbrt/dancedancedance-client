@@ -15,20 +15,19 @@ export class FieldUI  extends React.Component {
     this.props.fieldInfo.handleValueChange(evt.target.value);
   }
   render() {
-    gg("render field")
     const field = this.props.fieldInfo
-    ge()
     return (
       <div className="field">
         <div className="label">{field.label}&nbsp;</div>
-        {' '}<InputWidget value={field.value} onChange={this.onValueChange} onFocusChange={this.props.onFocusChange}/>
+        {' '}<InputWidget value={field.value} onChange={this.onValueChange} />
       </div>
     )
   }
   componentDidUpdate() {
     // window.requestAnimationFrame(()=>{
       window.requestAnimationFrame(()=>{
-        this.props.onUpdate() // used by parent component to re-measure its size.
+        
+        // this.props.onUpdate() // used by parent component to re-measure its size.
       })
     // })
   }

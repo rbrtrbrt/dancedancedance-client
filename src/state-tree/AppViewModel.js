@@ -6,19 +6,17 @@ import { setLogEnabled } from "mobx-react-devtools";
 import * as mst from "mobx-state-tree";
 const ty = mst.types;
 
-import { uiTracker } from "../helpers/UITracker";
-import { offsetFromDocument, vectorLength,rectContainsPoint } from "../helpers/measure";
 
 import { newId } from "../helpers/idMaker";
 import cuid from "cuid";
 
-import { CanvasModel } from '../state-tree/CanvasModel';
-import { EditorModel } from '../state-tree/EditorModel';
+import { CanvasDocModel } from './CanvasDocModel';
+import { EditorViewModel } from './EditorViewModel';
 
-export const AppModel = ty.model("AppModel", {
-  editor1: EditorModel,
-  editor2: EditorModel,
-  canvas: CanvasModel
+export const AppViewModel = ty.model("AppViewModel", {
+  editor1: EditorViewModel,
+  editor2: EditorViewModel,
+  canvas: CanvasDocModel
 }).extend( self => {
   return {
     views: {

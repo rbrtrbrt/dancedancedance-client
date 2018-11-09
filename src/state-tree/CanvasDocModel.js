@@ -9,12 +9,11 @@ const ty = mst.types;
 import { newId } from "../helpers/idMaker";
 import cuid from "cuid";
 
-import { BlockModel } from '../state-tree/BlockModel';
+import { BlockDocModel } from './BlockModels';
 
-
-export const CanvasModel = ty.model("CanvasModel", {
+export const CanvasDocModel = ty.model("CanvasDocModel", {
   id: ty.identifier,
-  blocks: ty.array(BlockModel)
+  blocks: ty.array(BlockDocModel)
 })
 .extend( self => {
   return {

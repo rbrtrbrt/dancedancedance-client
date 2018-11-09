@@ -12,12 +12,15 @@ import { offsetFromDocument, vectorLength,rectContainsPoint } from "../helpers/m
 import { newId } from "../helpers/idMaker";
 import cuid from "cuid";
 
-import { InputFieldModel } from '../state-tree/FieldModel';
-import { CanvasModel } from '../state-tree/CanvasModel';
+import { FieldViewModel, FieldDocModel } from './FieldModels';
+import { CanvasDocModel } from './CanvasDocModel';
 
 import { theme } from "../style/defaultStyleParams";
 
 import { ll, gg, ge } from '../helpers/debug/ll';
+
+
+// Little models describing how a block gets its position:
 
 const BlockOnCanvas = ty.model("BlockOnCanvas", {
   x: ty.number,  // canvas coord
@@ -34,23 +37,49 @@ const BlockOnCanvas = ty.model("BlockOnCanvas", {
 }))
 
 const BlockAttach = ty.model("BlockAttach", {
-  parentBlock: ty.reference(ty.late(()=>BlockModel))
+  parentBlock: ty.reference(ty.late(()=>BlockDocModel))
 })
 
-export const BlockModel = ty.model("Block", {
+
+export const BlockViewModel = 
+ty.model("Block", {
+  debugName: ty.maybe(ty.string),
+  id: ty.identifier,
+  fieldViews: ty.array(FieldViewModel),
+})
+.extend(self => {
+  return {
+    views: {
+
+    },
+    actions: {
+      afterCreate() {
+        if(self.debugName == undefined) {
+          self.debugName = newId("BlockVM")
+        }
+        if(self.id == undefined) {
+          self.id = cuid();
+        }
+      },
+
+    }
+  }
+})
+
+
+export const BlockDocModel = ty.model("Block", {
     debugName: ty.maybe(ty.string),
     id: ty.identifier,
     title: ty.maybe(ty.string),
     anchor: ty.union(BlockOnCanvas, BlockAttach),
     dragState: ty.optional(ty.enumeration("dragState",["notDragging", "dragging:BeforeCorrect","dragging:Correcting","dragging"]), "notDragging"),
-    fields: ty.array(ty.union(InputFieldModel))
+    fields: ty.array(ty.union(FieldDocModel))
   })
   .extend(self => {
     const _headerSize = mx.observable({
       width: 300,
       height: 40,
-    })
-    let _hasFocus = false;
+    });
     let _dragCorrectionX = null;
     let _dragCorrectionY = null;
     let _whenDisposer = null;
@@ -90,7 +119,7 @@ export const BlockModel = ty.model("Block", {
       actions: {
         afterCreate() {
           if(self.debugName == undefined) {
-            self.debugName = newId("block")
+            self.debugName = newId("Block")
           }
           if(self.id == undefined) {
             self.id = cuid();
@@ -100,11 +129,8 @@ export const BlockModel = ty.model("Block", {
           _headerSize.width = newWidth;
           _headerSize.height = newHeight;
         },
-        setFocus(hasFocus) {
-          _hasFocus = hasFocus;
-        },
         moveToTop() {
-          mst.getParentOfType(self,CanvasModel).moveBlockToTop(self);
+          mst.getParentOfType(self,CanvasDocModel).moveBlockToTop(self);
         },
         // called when drag distance > 3
         startDragCorrecting() {
@@ -126,7 +152,7 @@ export const BlockModel = ty.model("Block", {
         }, 
         endDrag(x,y) {
           _whenDisposer();
-          mst.getParentOfType(self,CanvasModel).moveBlockToTop(self);
+          self.moveToTop();
           if(self.dragState === "dragging:BeforeCorrect") {
             self.anchor.moveTo(x-_dragCorrectionX,y-_dragCorrectionY);
           } else {

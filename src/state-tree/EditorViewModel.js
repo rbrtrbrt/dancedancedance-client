@@ -13,16 +13,15 @@ import { offsetFromDocument, vectorLength,rectContainsPoint } from "../helpers/m
 import { newId } from "../helpers/idMaker";
 import cuid from "cuid";
 
-import { CanvasModel } from '../state-tree/CanvasModel';
+import { CanvasDocModel } from './CanvasDocModel';
 
 import { ll, gg, ge } from '../helpers/debug/ll';
 
-export const EditorModel = ty.model("EditorModel", {
+export const EditorViewModel = ty.model("EditorViewModel", {
   debugName: ty.maybe(ty.string),
-  canvas: ty.reference(CanvasModel),
+  canvas: ty.reference(CanvasDocModel),
   viewportX: ty.optional(ty.number,0),
   viewportY: ty.optional(ty.number,0),
-  hasFocus: ty.optional(ty.boolean,false),
 }).extend( self => {
   const _measureRef = React.createRef();
   let _clientRect = null;
@@ -66,7 +65,6 @@ export const EditorModel = ty.model("EditorModel", {
           self.viewportY += e.deltaY
         }
       },
-      handleFocusChange(newFocus){}
     }
   }
 })

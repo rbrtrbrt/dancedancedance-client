@@ -8,8 +8,6 @@ import DevTools from "mobx-react-devtools";
 import mousetrap from "mousetrap";
 import classnames from "classnames";
 
-
-
 // import { detect } from "detect-browser";
 // const currentBrowser = detect();
 // console.log("BROWSER:", currentBrowser);
@@ -39,7 +37,6 @@ export class AppUI extends React.Component {
         {(x)=>b.x}
         {(y)=>b.y}
         {b.dragState}
-        {()=>b.hasFocus}
       </MobxStatus>
     });
     const uiTrackerStatus = 
@@ -58,7 +55,7 @@ export class AppUI extends React.Component {
           <EditorPanelUI editPanelInfo={appInfo.editor1} key={appInfo.editor1.debugName}/>
           <EditorPanelUI editPanelInfo={appInfo.editor2} key={appInfo.editor2.debugName}/>
         </div>
-        { uiTracker.dragItem ? <DraggingBlock blockInfo={uiTracker.dragItem}/> : null }
+        { uiTracker.drag.item ? <DraggingBlock blockInfo={uiTracker.drag.item}/> : null }
         {this.renderDebugComponents()}
       </Fragment>;
   }

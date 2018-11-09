@@ -21,7 +21,6 @@ export class InputWidget extends React.Component {
 
   onChangeFocus = hasFocus => evt => {
     this.setState({ hasFocus });
-    this.props.onFocusChange(hasFocus);
   };
 
   componentDidUpdate(prevProps, prevState) {

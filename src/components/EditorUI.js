@@ -18,7 +18,7 @@ export class EditorPanelUI extends React.Component  {
     const panel = this.props.editPanelInfo
     const isDragPanel = panel === uiTracker.dragPanel
     const bgClasses = classnames("editorPanelBackground", {isDragPanel})
-    return <div className={"editorPanel"} ref={panel.measureRef} onWheel={panel.handleWheel} onFocus={(e)=>{return;ll("editorFocus", panel.debugName,e)}} onBlur={(e)=>{return;ll("editorBlur", panel.debugName,e)}}>
+    return <div className={"editorPanel"} ref={panel.measureRef} onWheel={panel.handleWheel} >
         <div className={bgClasses}
              style={{backgroundPositionX: panel.viewportX,backgroundPositionY: panel.viewportY}}/>
         <div className="canvasView" style={{transform: `translate(${panel.viewportX}px, ${panel.viewportY}px)`}}>
