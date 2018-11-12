@@ -27,7 +27,7 @@ export class FieldUI  extends React.Component {
     // window.requestAnimationFrame(()=>{
       window.requestAnimationFrame(()=>{
         
-        // this.props.onUpdate() // used by parent component to re-measure its size.
+        this.props.onUpdate() // used by parent component to re-measure its size.
       })
     // })
   }

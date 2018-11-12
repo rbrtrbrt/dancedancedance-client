@@ -52,10 +52,12 @@ class BlockBackground extends React.Component {
     }
 };
 
-// The core block-component, without any animation logic.
-@observer
-class BasicBlockUI extends React.Component {
-  displayName = "BasicBlockUI";
+class BlockHeader extends React.Component {
+  displayName = "BlockHeader";
+  constructor(props) {
+    super(props);
+    this.headerRef = React.createRef();
+  }  
   measureSize= () => {
     const {width, height} = this.headerRef.current.getBoundingClientRect();
     this.props.blockInfo.newHeaderSize(width, height)
@@ -64,7 +66,27 @@ class BasicBlockUI extends React.Component {
   componentDidMount() {
     this.measureSize()
   }
-  render(x) {
+  render() {
+    const { blockInfo:bi } = this.props;
+    const fields = bi.fields.map( (field,idx) => {
+        return <Fragment key={idx}>
+          {' '}<FieldUI fieldInfo={field} key={field.debugName} onUpdate={this.measureSize} />
+        </Fragment>
+    })
+    // The wierd double-span construct is needed to have the trailing space be subject
+    // to .header's word-spacing for separating fields (word-spacing is disabled inside .blockTitle)
+    return <div className="header" ref={this.headerRef}>
+      <span><span className="blockTitle">{bi.blockTitle}</span> </span>
+      { fields }
+    </div>
+  }
+}
+
+// The core block-component, without any animation logic.
+@observer
+class BasicBlockUI extends React.Component {
+  displayName = "BasicBlockUI";
+  render() {
     const { xx, yy, blockInfo:bi, isGhost, isDragged } = this.props;
     const classes = classnames("block", {ghost:isGhost});
     const style = {height:bi.height}
@@ -74,24 +96,13 @@ class BasicBlockUI extends React.Component {
       style.left = xx
       style.top = yy
     }
-    const fields = bi.fields.map( (field,idx) => {
-        return <Fragment key={idx}>
-          {' '}<FieldUI fieldInfo={field} key={field.debugName} onUpdate={this.measureSize} />
-        </Fragment>
-    })
-    // The wierd double-span construct is needed to have the trailing space be subject
-    // to .header's word-spacing for separating fields (word-spacing is disabled inside .blockTitle)
-    const header = <div className="header" ref={this.headerRef}>
-      <span><span className="blockTitle">{bi.blockTitle}</span> </span>
-      { fields }
-    </div>
     return (
       <div className={classes} style={style} onMouseDown={bi.moveToTop}>
         <BlockBackground width={bi.width} height={bi.height} 
                          hover={isDragged} 
                          onStartDrag={bi.startDrag}
                          isGhost={isGhost} />
-        {header}
+        <BlockHeader blockInfo={bi}/>
       </div>
     );
   }
