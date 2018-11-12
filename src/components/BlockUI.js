@@ -39,9 +39,11 @@ class BlockBackground extends React.Component {
     const offsetX = -extend/2;
     const offsetY = -extend/3;
     const filterId = hover ? "filter-blockshadow-drag" : "filter-blockshadow"
-    return <svg width={extendedWidth} height={extendedHeight} 
-                viewBox={`${offsetX} ${offsetY} ${extendedWidth} ${extendedHeight}`} 
-                style={{ position: "absolute", top: offsetY, left: offsetX }} 
+    return <svg width={width} height={height}  
+                viewBox={`0 0 ${width} ${height}`} 
+                // viewBox={`${offsetX} ${offsetY} ${extendedWidth} ${extendedHeight}`} 
+                style={{ position: "absolute", top: 0, left: 0,overflow: "visible" }} 
+                // style={{ position: "absolute", top: offsetY, left: offsetX }} 
                 fill="none" xmlns="http://www.w3.org/2000/svg">
         { !isGhost ? 
        <rect className="blockBackgroundShadow" x="0" y="0" width={width} height={height} rx="5" onPointerDown={onStartDrag} style={{ filter: "url(#"+filterId+")" }}/>
@@ -89,7 +91,7 @@ class BasicBlockUI extends React.Component {
   render() {
     const { xx, yy, blockInfo:bi, isGhost, isDragged } = this.props;
     const classes = classnames("block", {ghost:isGhost});
-    const style = {height:bi.height}
+    const style = {}
     if(isDragged) {
       style.transform = "translate(" + xx + "px," + yy + "px)"
     } else {
