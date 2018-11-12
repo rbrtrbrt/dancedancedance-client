@@ -40,39 +40,14 @@ const BlockAttach = ty.model("BlockAttach", {
   parentBlock: ty.reference(ty.late(()=>BlockDocModel))
 })
 
-
-export const BlockViewModel = 
-ty.model("Block", {
-  debugName: ty.maybe(ty.string),
-  id: ty.identifier,
-  fieldViews: ty.array(FieldViewModel),
-})
-.extend(self => {
-  return {
-    views: {
-
-    },
-    actions: {
-      afterCreate() {
-        if(self.debugName == undefined) {
-          self.debugName = newId("BlockVM")
-        }
-        if(self.id == undefined) {
-          self.id = cuid();
-        }
-      },
-
-    }
-  }
-})
-
-
 export const BlockDocModel = ty.model("Block", {
     debugName: ty.maybe(ty.string),
     id: ty.identifier,
     title: ty.maybe(ty.string),
     anchor: ty.union(BlockOnCanvas, BlockAttach),
     dragState: ty.optional(ty.enumeration("dragState",["notDragging", "dragging:BeforeCorrect","dragging:Correcting","dragging"]), "notDragging"),
+    // dragClickX: ty.maybe(ty.number),
+    // dragClickY: ty.maybe(ty.number),
     fields: ty.array(ty.union(FieldDocModel))
   })
   .extend(self => {
@@ -89,6 +64,7 @@ export const BlockDocModel = ty.model("Block", {
           return theme.blockLeftTabWidth + _headerSize.width + theme.blockContentMargin * 2;
         },
         get height() {
+          ll(this.blockTitle, ()=>_headerSize.height, (result)=> _headerSize.height + theme.blockContentMargin * 2)
           return _headerSize.height + theme.blockContentMargin * 2;
         },
         get x() {
@@ -98,7 +74,6 @@ export const BlockDocModel = ty.model("Block", {
           return self.anchor.y
         },
         get blockTitle() {
-          ll(1, ()=> self.title, ()=> self.debugName)
           return self.title || self.debugName
         },
         get dragCorrectionX() {
@@ -141,7 +116,7 @@ export const BlockDocModel = ty.model("Block", {
           self.dragState = "dragging";
         },
         startDrag(evt) {
-          let [x,y] = uiTracker.startDrag(evt, self);
+          let [x,y] = uiTracker.startDrag(evt, self); // canvas coords
           _dragCorrectionX = x - self.anchor.x
           _dragCorrectionY = y - self.anchor.y
           self.dragState = "dragging:BeforeCorrect"

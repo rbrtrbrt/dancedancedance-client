@@ -54,7 +54,6 @@ export const testAppModel = AppViewModel.create({
   }
 });
 
-ll("AA", testAppModel)
 const theUITracker = new UITracker(testAppModel);
 window.app = testAppModel
 makeInspectable(testAppModel);
