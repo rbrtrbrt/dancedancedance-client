@@ -42,7 +42,6 @@ class UITracker {
   @action
   refreshPanelRects() {
     this.dndPanels.forEach( panel => {
-      // ll("aaa", ()=>panel)
       return panel.refreshClientRect()})    
   } 
   @computed 

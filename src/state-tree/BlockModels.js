@@ -51,21 +51,22 @@ export const BlockDocModel = ty.model("Block", {
     fields: ty.array(ty.union(FieldDocModel))
   })
   .extend(self => {
-    const _headerSize = mx.observable({
-      width: 300,
-      height: 40,
+    const _dimensions = mx.observable({
+      titleWidth: 0
     });
+    let _fieldLayout = mx.observable.map()
     let _dragCorrectionX = null;
     let _dragCorrectionY = null;
     let _whenDisposer = null;
     return { 
       views: { 
         get width() {
-          return theme.blockLeftTabWidth + _headerSize.width + theme.blockContentMargin * 2;
+          const [fieldsWidth, , ] = self.fieldsLayout;
+          return theme.blockLeftTabWidth + fieldsWidth + theme.blockContentMarginX * 2;
         },
         get height() {
-          ll(this.blockTitle, ()=>_headerSize.height, (result)=> _headerSize.height + theme.blockContentMargin * 2)
-          return _headerSize.height + theme.blockContentMargin * 2;
+          const [ ,fieldsHeight, ] = self.fieldsLayout;
+          return fieldsHeight + theme.blockContentMarginY * 2;
         },
         get x() {
           return self.anchor.x
@@ -90,6 +91,37 @@ export const BlockDocModel = ty.model("Block", {
             throw new Error(`Can't get dragCorrectionY of ${self.debugName} with dragState ${self.dragState}`)
           }
         },
+        get fieldsLayout() {
+          const fieldLocations = new Map();
+          let curX = _dimensions.titleWidth;
+          let maxWidth = curX;
+          let curY = 0;
+          let lineHeight = 14;
+          const space = theme.fieldSeparationSpace
+          self.fields.forEach( (field,idx)=>{
+            const loc = {};
+            const spacedWidth = field.width + ( curX == 0 ? 0 : space)
+            if(curX + spacedWidth > theme.blockHeaderMaxWidth) {
+              curX = 0;
+              curY += lineHeight;
+              lineHeight = 0;
+              maxWidth = theme.blockHeaderMaxWidth;
+            } else {
+              curX += theme.fieldSeparationSpace
+            }
+            loc.x = curX
+            loc.y = curY
+            curX += field.width
+            maxWidth = Math.max(maxWidth, loc.x + field.width)
+            lineHeight = Math.max(lineHeight,field.height);
+            fieldLocations.set(field,loc)
+          })
+          return [maxWidth, curY+lineHeight,fieldLocations];
+        },
+        fieldPosition(field) {
+          const [ , ,fieldLocs] = self.fieldsLayout;
+          return fieldLocs.get(field);
+        },
       }, 
       actions: {
         afterCreate() {
@@ -99,10 +131,6 @@ export const BlockDocModel = ty.model("Block", {
           if(self.id == undefined) {
             self.id = cuid();
           }
-        },
-        newHeaderSize(newWidth, newHeight) {
-          _headerSize.width = newWidth;
-          _headerSize.height = newHeight;
         },
         moveToTop() {
           mst.getParentOfType(self,CanvasDocModel).moveBlockToTop(self);
@@ -137,6 +165,10 @@ export const BlockDocModel = ty.model("Block", {
           _dragCorrectionY = null;
           self.dragState = "notDragging"
         }, 
-      } 
+        updateTitleWidth(width){
+          _dimensions.titleWidth = width;
+          ll(self.title,()=>_dimensions.titleWidth)
+        }
+      }, 
     };
 });

@@ -1,4 +1,7 @@
 
+const dontLog = true
+
+
 function labelAndValue(thing) {
   const anonFunctionRegex = /^\s*\(?\s*(\w*)\s*\)?\s*=>\s*(.*)/
   if(typeof(thing) !== "function") {
@@ -23,10 +26,10 @@ function callerName() {
 
 export function ll(msg,...fs) {
   const anonFunctionRegex = /^\s*\(?\s*(\w*)\s*\)?\s*=>\s*(.*)/
-  if(window.noLogging && fs.length === 0) {
+  if(dontLog && fs.length === 0) {
     return 
   }
-  if(window.noLogging) {
+  if(dontLog) {
     const [_,value] = labelAndValue(fs[0])
     return value
   }
@@ -56,13 +59,13 @@ export function pr(str) {
 }
 
 export function gg(label) {
-  if(window.noLogging) {
+  if(dontLog) {
     return
   }
   console.group(label)
 }
 export function ge() {
-  if(window.noLogging) {
+  if(dontLog) {
     return
   }
   console.groupEnd()

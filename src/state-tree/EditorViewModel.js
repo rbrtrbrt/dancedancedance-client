@@ -36,6 +36,9 @@ export const EditorViewModel = ty.model("EditorViewModel", {
       },
       get containsMouse() {
         return rectContainsPoint( _clientRect, uiTracker.mouseX, uiTracker.mouseY );
+      },
+      get isDragPanel() {
+        return uiTracker.drag && uiTracker.drag.lastDragPanel === self
       }
     },
     actions: {
@@ -58,7 +61,7 @@ export const EditorViewModel = ty.model("EditorViewModel", {
         e.preventDefault();
         if (e.ctrlKey) {
           // Your zoom/scale factor
-          ll(12,(scale) => e.deltaY * 0.01, ()=>e.deltaMode )
+          ll("Wheelzoom:",(scale) => e.deltaY * 0.01, ()=>e.deltaMode )
         } else {
           // Your trackpad X and Y positions
           self.viewportX += e.deltaX

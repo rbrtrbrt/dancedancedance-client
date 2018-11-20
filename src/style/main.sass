@@ -72,19 +72,18 @@ body.noSelect
 
   .header 
     position: absolute
-    // outline: 1px solid white
     max-width: var(--blockHeaderMaxWidth)
-    top: 3px
+    width: var(--blockHeaderMaxWidth)
+    top: calc(var(--blockContentMarginY) * 0.7)
     left: calc(var(--blockLeftTabWidth) + 6px)
     font-family: "Barlow"
     font-size: var(--blockFontSize)
     line-height: var(--blockLineHeight)
     color: var(--blockFontColor)
-    // word-spacing: 3px
 
     .blockTitle
       font-weight: 600
-      word-spacing: 0
+      position: absolute
 
 
   .blockBackgroundLight 
@@ -117,12 +116,10 @@ body.noSelect
 /**  Field  **/
 
 .field
-  display: inline-block
+  position: absolute
   font:
     size: var(--blockFontSize)
   color: var(--fieldLabelColor)
-  //word-spacing: 3px
-
 
   .label
     display: inline-block

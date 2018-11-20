@@ -11,6 +11,7 @@ import { FieldUI } from "./FieldUI"
 import { ll, gg,ge } from "../helpers/debug/ll";
 
 import { theme } from "../style/defaultStyleParams";
+import { Measuring } from "../helpers/measure";
 
 
 // This component is used to globally define some SVG filters for drop-shadows
@@ -18,11 +19,11 @@ export const BlockSVGFilters = () => {
   return  (
     <svg>
       <defs>
-        <filter id="filter-blockshadow" filterUnits="userSpaceOnUse">
+        <filter id="filter-blockshadow" filterUnits="objectBoundingBox">
             <feDropShadow dx="0" dy="1" stdDeviation="2" floodOpacity="0.25" />
         </filter>
-        <filter id="filter-blockshadow-drag" filterUnits="userSpaceOnUse">
-            <feDropShadow dx="0" dy="2" stdDeviation="4" floodOpacity="0.25" />
+        <filter id="filter-blockshadow-drag" filterUnits="objectBoundingBox" x="-20%" y="-50%" width="150%" height="220%">
+            <feDropShadow dx="0" dy="4" stdDeviation="8" floodOpacity="0.25" />
         </filter>
       </defs>
     </svg>
@@ -33,17 +34,10 @@ class BlockBackground extends React.Component {
   render() {
     const { width, height, hover, isGhost, onStartDrag} = this.props;
     // need to extend the size to prevent clipping of dropshadow
-    const extend = 30;
-    const extendedWidth = width + extend;
-    const extendedHeight = height + extend;
-    const offsetX = -extend/2;
-    const offsetY = -extend/3;
     const filterId = hover ? "filter-blockshadow-drag" : "filter-blockshadow"
     return <svg width={width} height={height}  
                 viewBox={`0 0 ${width} ${height}`} 
-                // viewBox={`${offsetX} ${offsetY} ${extendedWidth} ${extendedHeight}`} 
                 style={{ position: "absolute", top: 0, left: 0,overflow: "visible" }} 
-                // style={{ position: "absolute", top: offsetY, left: offsetX }} 
                 fill="none" xmlns="http://www.w3.org/2000/svg">
         { !isGhost ? 
        <rect className="blockBackgroundShadow" x="0" y="0" width={width} height={height} rx="5" onPointerDown={onStartDrag} style={{ filter: "url(#"+filterId+")" }}/>
@@ -54,31 +48,27 @@ class BlockBackground extends React.Component {
     }
 };
 
+
+const BlockTitle = Measuring(class BlockTitle extends React.PureComponent {
+  render() {    
+    return <div className="blockTitle">{this.props.text}</div>
+  }
+})
+
 class BlockHeader extends React.Component {
   displayName = "BlockHeader";
-  constructor(props) {
-    super(props);
-    this.headerRef = React.createRef();
-  }  
-  measureSize= () => {
-    const {width, height} = this.headerRef.current.getBoundingClientRect();
-    this.props.blockInfo.newHeaderSize(width, height)
-    ll(this.props.blockInfo.blockTitle, width, height);
-  }
-  componentDidMount() {
-    this.measureSize()
-  }
   render() {
     const { blockInfo:bi } = this.props;
     const fields = bi.fields.map( (field,idx) => {
         return <Fragment key={idx}>
-          {' '}<FieldUI fieldInfo={field} key={field.debugName} onUpdate={this.measureSize} />
+          <FieldUI fieldInfo={field} key={field.debugName} />
         </Fragment>
     })
     // The wierd double-span construct is needed to have the trailing space be subject
     // to .header's word-spacing for separating fields (word-spacing is disabled inside .blockTitle)
-    return <div className="header" ref={this.headerRef}>
-      <span><span className="blockTitle">{bi.blockTitle}</span> </span>
+    // return <div className="header" ref={this.headerRef}>
+    return <div className="header">
+      <BlockTitle text={bi.blockTitle} onMeasure={({width})=>bi.updateTitleWidth(width)}/>
       { fields }
     </div>
   }
@@ -116,16 +106,18 @@ class BasicBlockUI extends React.Component {
 export class DraggingBlock extends React.Component {
   displayName="DraggingBlock";
   render() {
-    const { blockInfo:bi } = this.props;     
+    const { blockInfo:bi } = this.props;   
     const dragX = uiTracker.mouseX
     const dragY = uiTracker.mouseY
+    let result;
     switch(bi.dragState) {
       case "dragging:BeforeCorrect":
-        return ReactDOM.createPortal(
+        result =  ReactDOM.createPortal(
           <BasicBlockUI blockInfo={bi} xx={dragX-bi.dragCorrectionX-2} yy={dragY-bi.dragCorrectionY-2} isDragged/>, 
           document.getElementById("floatPlane"));
+        break;
       case "dragging:Correcting":
-        return ReactDOM.createPortal(
+        result = ReactDOM.createPortal(
           <Spring key="correcting" 
                   to={{xx:0,yy:0}} 
                   from={{ xx: -bi.dragCorrectionX, yy: -bi.dragCorrectionY }} 
@@ -138,13 +130,16 @@ export class DraggingBlock extends React.Component {
             }}  
           </Spring>, 
           document.getElementById("floatPlane"));
+        break;
       case "dragging":
-        return ReactDOM.createPortal(
-          <BasicBlockUI blockInfo={bi} xx={dragX-2} yy={dragY-2}  isDragged/>, 
+        result = ReactDOM.createPortal(
+          <BasicBlockUI blockInfo={bi} xx={dragX-2} yy={dragY-2} isDragged/>, 
           document.getElementById("floatPlane")
         );
+      break;
       default: throw new Error(`unexpected dragState for block "${bi.debugName}": ${bi.dragState}`)
     }
+    return result;
   }
 };
 
