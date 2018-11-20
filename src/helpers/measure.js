@@ -54,7 +54,6 @@ export function Measuring(CompClass) {
     }
     measure() {
       window.requestAnimationFrame(()=>{
-        ll("RAF",this.displayName);
         if(!this.__isMounted) {
           return;
         }

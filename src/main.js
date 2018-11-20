@@ -15,18 +15,53 @@ import { ll } from './helpers/debug/ll';
 console.log("HI THERE!!");
 
 const canvasId=cuid();
+
+const eye1Block = { 
+  id: cuid(), 
+  anchor: { x: 100, y: 100 }, 
+  title: "circle",
+  fields: [
+    {id: cuid(), fieldName: "x", value: "150"},
+    {id: cuid(), fieldName: "y", value: "100"},
+    {id: cuid(), fieldName: "r", value: "15"},
+  ]
+}
+const eye2Block = { 
+  id: cuid(), anchor: { aboveBlock: eye1Block.id }, 
+  title: "circle",
+  fields: [
+    {id: cuid(), fieldName: "x", value: "200"},
+    {id: cuid(), fieldName: "y", value: "100"},
+    {id: cuid(), fieldName: "r", value: "15"},
+  ]
+}
+const noseBlock = { 
+  id: cuid(), anchor: { aboveBlock: eye2Block.id }, 
+  title: "line",
+  fields: [
+    {id: cuid(), fieldName: "start x", value: "175"},
+    {id: cuid(), fieldName: "start y", value: "120"},
+    {id: cuid(), fieldName: "end x", value: "175"},
+    {id: cuid(), fieldName: "end y", value: "150"},
+  ]
+}
+const mouthBlock = { id: cuid(), anchor: { aboveBlock: noseBlock.id }, 
+  title: "arc",
+  fields: [
+    {id: cuid(), fieldName: "center x", value: "175"},
+    {id: cuid(), fieldName: "center y", value: "120"},
+    {id: cuid(), fieldName: "width", value: "70"},
+    {id: cuid(), fieldName: "height", value: "80"},
+    {id: cuid(), fieldName: "start angle", value: "225"},
+    {id: cuid(), fieldName: "end angle", value: "315"},
+  ]
+}
+
 export const testAppModel = AppViewModel.create({
   canvas: {
     id: canvasId,
     blocks: [
-      { id: cuid(), anchor: { x: 100, y: 100 }, 
-        title: "circle",
-        fields: [
-          {id: cuid(),fieldName: "x", value: "150"},
-          {id: cuid(),fieldName: "y", value: "300"},
-          {id: cuid(),fieldName: "r", value: "100"},
-        ]
-      },
+       eye1Block, eye2Block, noseBlock, mouthBlock,
       { id: cuid(), anchor: { x: 0, y: 0 }, 
         title: "open file",
         fields: [

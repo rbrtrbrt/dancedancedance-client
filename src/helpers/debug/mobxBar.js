@@ -100,7 +100,7 @@ export class MobxStatus extends React.Component {
     super(props);
   }
   render() {
-      return !window.noLogging ? <RealMobxStatus {...this.props} /> : null;
+      return !window.dontLog ? <RealMobxStatus {...this.props} /> : null;
   }
 }
 

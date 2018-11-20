@@ -13,7 +13,7 @@ import classnames from "classnames";
 // console.log("BROWSER:", currentBrowser);
 
 import { EditorPanelUI } from "./EditorUI";
-import { DraggingBlock, BlockUI, BlockSVGFilters } from "./BlockUI";
+import { DraggingBlocks, BlockSVGFilters } from "./BlockUI";
 
 import { MobxBar, MobxStatus } from '../helpers/debug/mobxBar';
 import { uiTracker } from '../helpers/UITracker';
@@ -36,15 +36,26 @@ export class AppUI extends React.Component {
       return <MobxStatus name={b.debugName}  key={b.debugName}>
         {(x)=>b.x}
         {(y)=>b.y}
-        {b.dragState}
       </MobxStatus>
     });
-    const uiTrackerStatus = 
+    
+    const uiTrackerStatus = [
       <MobxStatus name="mouse" key="uiTracker">
         {(x)=>uiTracker.mouseX}
         {(y)=>uiTracker.mouseY}
-      </MobxStatus>;
-    return [...editorStatuses, ...blockStatuses, uiTrackerStatus, <DevTools key="devtools" />];
+        {(drag)=>uiTracker.drag.correctingState}
+      </MobxStatus>
+    ];
+    if(uiTracker.drag.item) {
+      const [dx,dy] = uiTracker.canvasDragLocation
+      uiTrackerStatus.push(
+        <MobxStatus name="drag" key="uiTracker.drag">
+          {(cx)=>dx}
+          {(cy)=>dy}
+        </MobxStatus>
+      )
+    }
+    return [...editorStatuses, ...blockStatuses, ...uiTrackerStatus, <DevTools key="devtools" />];
   }
 
   render() {
@@ -55,7 +66,7 @@ export class AppUI extends React.Component {
           <EditorPanelUI editPanelInfo={appInfo.editor1} key={appInfo.editor1.debugName}/>
           <EditorPanelUI editPanelInfo={appInfo.editor2} key={appInfo.editor2.debugName}/>
         </div>
-        { uiTracker.drag.item ? <DraggingBlock blockInfo={uiTracker.drag.item}/> : null }
+        { uiTracker.drag.item ? <DraggingBlocks blockInfo={uiTracker.drag.item}/> : null }
         {this.renderDebugComponents()}
       </Fragment>;
   }

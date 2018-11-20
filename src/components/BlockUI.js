@@ -8,7 +8,7 @@ import classnames from "classnames";
 
 import { uiTracker } from '../helpers/UITracker'
 import { FieldUI } from "./FieldUI"
-import { ll, gg,ge } from "../helpers/debug/ll";
+import { ll, gg, ge, checkDef } from "../helpers/debug/ll";
 
 import { theme } from "../style/defaultStyleParams";
 import { Measuring } from "../helpers/measure";
@@ -100,23 +100,37 @@ class BasicBlockUI extends React.Component {
   }
 };
 
+
+@observer 
+class BasicDragBlocks extends React.Component {
+  render() {
+    const result = []
+    for(const block of this.props.blockInfo.allBlocksBelow()) {
+      result.push(
+        <BasicBlockUI blockInfo={block} key={block.debugName} xx={this.props.xx} yy={this.props.yy + block.distanceFromTopBlock} isDragged/>
+      )
+    }
+    return result
+  }
+}
+
 // This component renders a block that is being dragged. It handles positioning and animation of the
 // dragged block.
 @observer
-export class DraggingBlock extends React.Component {
-  displayName="DraggingBlock";
+export class DraggingBlocks extends React.Component {
+  displayName="DraggingBlocks";
   render() {
     const { blockInfo:bi } = this.props;   
     const dragX = uiTracker.mouseX
     const dragY = uiTracker.mouseY
     let result;
-    switch(bi.dragState) {
-      case "dragging:BeforeCorrect":
+    switch(uiTracker.drag.correctingState) {
+      case "beforeCorrect":
         result =  ReactDOM.createPortal(
-          <BasicBlockUI blockInfo={bi} xx={dragX-bi.dragCorrectionX-2} yy={dragY-bi.dragCorrectionY-2} isDragged/>, 
+          <BasicDragBlocks blockInfo={bi} xx={dragX-bi.dragCorrectionX-2} yy={dragY-bi.dragCorrectionY-2}/>, 
           document.getElementById("floatPlane"));
         break;
-      case "dragging:Correcting":
+      case "correcting":
         result = ReactDOM.createPortal(
           <Spring key="correcting" 
                   to={{xx:0,yy:0}} 
@@ -125,19 +139,19 @@ export class DraggingBlock extends React.Component {
                   onRest={bi.correctionRest}>
             {animProps => {
               return <Observer>
-                        {()=><BasicBlockUI blockInfo={bi} xx={dragX+animProps.xx-2} yy={dragY+animProps.yy-2} isDragged/>}
+                        {()=><BasicDragBlocks blockInfo={bi} xx={dragX+animProps.xx-2} yy={dragY+animProps.yy-2}/>}
                       </Observer>;
             }}  
           </Spring>, 
           document.getElementById("floatPlane"));
         break;
-      case "dragging":
+      case "afterCorrect":
         result = ReactDOM.createPortal(
-          <BasicBlockUI blockInfo={bi} xx={dragX-2} yy={dragY-2} isDragged/>, 
+          <BasicDragBlocks blockInfo={bi} xx={dragX-2} yy={dragY-2} isDragged/>, 
           document.getElementById("floatPlane")
         );
       break;
-      default: throw new Error(`unexpected dragState for block "${bi.debugName}": ${bi.dragState}`)
+      default: throw new Error(`unexpected dragState: ${uiTracker.drag.correctingState}`)
     }
     return result;
   }
@@ -150,7 +164,7 @@ export class BlockUI extends React.Component {
   displayName = "BlockUI";
   render() {
     const { blockInfo:bi } = this.props;
-    const isGhost = bi.dragState !== "notDragging"
+    const isGhost = bi.isDragging;
     const key = isGhost ? "ghost" : "resting";
     return ( 
       <Spring key={key} 

@@ -17,7 +17,7 @@ import { CanvasDocModel } from './CanvasDocModel';
 
 import { theme } from "../style/defaultStyleParams";
 
-import { ll, gg, ge } from '../helpers/debug/ll';
+import { ll, gg, ge, checkDef } from '../helpers/debug/ll';
 
 
 // Little models describing how a block gets its position:
@@ -36,19 +36,30 @@ const BlockOnCanvas = ty.model("BlockOnCanvas", {
     }, 
 }))
 
-const BlockAttach = ty.model("BlockAttach", {
-  parentBlock: ty.reference(ty.late(()=>BlockDocModel))
+export const HangingBlock = ty.model("HangingBlock", {
+  aboveBlock: ty.reference(ty.late(()=>BlockDocModel))
+}).extend(self => {
+  return {
+    views: {
+      get x() {
+        return self.aboveBlock.x
+      },
+      get y() {
+        return self.aboveBlock.y + self.aboveBlock.height
+      },
+    },
+    actions: {
+    }
+  }
 })
 
 export const BlockDocModel = ty.model("Block", {
     debugName: ty.maybe(ty.string),
     id: ty.identifier,
     title: ty.maybe(ty.string),
-    anchor: ty.union(BlockOnCanvas, BlockAttach),
-    dragState: ty.optional(ty.enumeration("dragState",["notDragging", "dragging:BeforeCorrect","dragging:Correcting","dragging"]), "notDragging"),
-    // dragClickX: ty.maybe(ty.number),
-    // dragClickY: ty.maybe(ty.number),
-    fields: ty.array(ty.union(FieldDocModel))
+    anchor: ty.union(BlockOnCanvas, HangingBlock),
+    fields: ty.array(ty.union(FieldDocModel)),
+    blockBelow: ty.late(()=>ty.maybe(ty.reference(BlockDocModel)))
   })
   .extend(self => {
     const _dimensions = mx.observable({
@@ -58,6 +69,18 @@ export const BlockDocModel = ty.model("Block", {
     let _dragCorrectionX = null;
     let _dragCorrectionY = null;
     let _whenDisposer = null;
+
+    self.allBlocksBelow = function*(excludeSelf=false) {
+      let block = self;
+      if(excludeSelf) {
+        block = block.blockBelow
+      }
+      while(block) {
+        yield block;
+        block = block.blockBelow
+      }
+    }
+  
     return { 
       views: { 
         get width() {
@@ -74,23 +97,29 @@ export const BlockDocModel = ty.model("Block", {
         get y() {
           return self.anchor.y
         },
+        get distanceFromTopBlock() {
+          const aboveBlock = self.anchor.aboveBlock;
+          if(aboveBlock){
+            return aboveBlock.distanceFromTopBlock + aboveBlock.height
+          } else {
+            return 0
+          }
+        },
         get blockTitle() {
           return self.title || self.debugName
         },
         get dragCorrectionX() {
-          if( self.dragState !== "notDragging" ) {
-            return _dragCorrectionX
-          } else {
-            throw new Error(`Can't get dragCorrectionX of ${self.debugName} with dragState ${self.dragState}`)
-          }
+          checkDef(_dragCorrectionX,`Can't get dragCorrectionX of ${self.debugName}`)
+          return _dragCorrectionX
         },
         get dragCorrectionY() {
-          if( self.dragState !== "notDragging" ) {
-            return _dragCorrectionY
-          } else {
-            throw new Error(`Can't get dragCorrectionY of ${self.debugName} with dragState ${self.dragState}`)
-          }
+          checkDef(_dragCorrectionY,`Can't get dragCorrectionY of ${self.debugName}`)
+          return _dragCorrectionY
         },
+        get isDragging() {
+          return uiTracker.drag.item === self ||
+                 ( self.anchor.aboveBlock && self.anchor.aboveBlock.isDragging )
+        }, 
         get fieldsLayout() {
           const fieldLocations = new Map();
           let curX = _dimensions.titleWidth;
@@ -122,6 +151,10 @@ export const BlockDocModel = ty.model("Block", {
           const [ , ,fieldLocs] = self.fieldsLayout;
           return fieldLocs.get(field);
         },
+        connectKibbitzers() {
+          checkDef(uiTracker.drag.item,"Kibbitzers are not available when not dragging.");
+          
+        },
       }, 
       actions: {
         afterCreate() {
@@ -132,42 +165,34 @@ export const BlockDocModel = ty.model("Block", {
             self.id = cuid();
           }
         },
+        afterAttach() {
+          if( self.anchor.aboveBlock ) {
+            self.anchor.aboveBlock.setBelowBlock(self)
+          }
+        },
+        setBelowBlock(bBlock) {
+          self.blockBelow = bBlock;
+        },
         moveToTop() {
           mst.getParentOfType(self,CanvasDocModel).moveBlockToTop(self);
-        },
-        // called when drag distance > 3
-        startDragCorrecting() {
-          self.dragState = "dragging:Correcting"; 
-        },
-        // called by UI when correction animation is done
-        correctionRest() {
-          self.dragState = "dragging";
         },
         startDrag(evt) {
           let [x,y] = uiTracker.startDrag(evt, self); // canvas coords
           _dragCorrectionX = x - self.anchor.x
           _dragCorrectionY = y - self.anchor.y
-          self.dragState = "dragging:BeforeCorrect"
-          _whenDisposer = mx.when( ()=> {
-            return self.dragState === "dragging:BeforeCorrect" && 
-                   vectorLength(uiTracker.dragDeltaX, uiTracker.dragDeltaY) > 3
-          }, self.startDragCorrecting );
         }, 
         endDrag(x,y) {
-          _whenDisposer();
           self.moveToTop();
-          if(self.dragState === "dragging:BeforeCorrect") {
+          if(uiTracker.drag.correctingState === "beforeCorrect") {
             self.anchor.moveTo(x-_dragCorrectionX,y-_dragCorrectionY);
           } else {
             self.anchor.moveTo(x,y);
           }
           _dragCorrectionX = null;
           _dragCorrectionY = null;
-          self.dragState = "notDragging"
         }, 
         updateTitleWidth(width){
           _dimensions.titleWidth = width;
-          ll(self.title,()=>_dimensions.titleWidth)
         }
       }, 
     };

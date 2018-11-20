@@ -18,8 +18,6 @@ export const CanvasDocModel = ty.model("CanvasDocModel", {
 .extend( self => {
   return {
     views: {
-      // get extent() {
-      // }
     },
     actions: {
       afterCreate() {
@@ -31,8 +29,11 @@ export const CanvasDocModel = ty.model("CanvasDocModel", {
         blocks.push(block)
       },
       moveBlockToTop(block) {
-        const idx = self.blocks.indexOf(block);
-        mxu.moveItem(self.blocks,idx,self.blocks.length-1)
+        do {
+          const idx = self.blocks.indexOf(block);
+          mxu.moveItem(self.blocks,idx,self.blocks.length-1)
+          block = block.blockBelow
+        } while(block)
       }
     }
   }

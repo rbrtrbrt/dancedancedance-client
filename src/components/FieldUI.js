@@ -12,7 +12,6 @@ import { Measuring } from "../helpers/measure";
 
 const FieldLabel = Measuring(class FieldLabel extends React.Component {
   render() {
-    ll("render",this.props.text)
     return <div className="label">{this.props.text}&nbsp;</div>
   }
 })
@@ -34,7 +33,6 @@ class BasicFieldUI extends React.Component {
   }
   render() {
     const field = this.props.fieldInfo
-    ll("render",field.label, (props)=>this.props)
     return (
       <Fragment>
         <FieldLabel text={field.label} onMeasure={({width})=>field.updateLabelWidth(width)} />
@@ -46,17 +44,9 @@ class BasicFieldUI extends React.Component {
 
 @observer
 export class FieldUI  extends React.Component {
-  // measureSize = () => {
-  //   const {width} = this.fieldRef.current.getBoundingClientRect();
-  //   this.props.fieldInfo.updateFieldWidth(width);
-  //   ll(this.props.fieldInfo.fieldName, ()=>width);
-  // }
-  // componentDidMount() {
-  //   this.measureSize()
-  // }
+
   render() {
     const field = this.props.fieldInfo
-    ll("render",field.label, (props)=>this.props)
     const style = {
       left: field.location.x,
       top: field.location.y
@@ -67,9 +57,4 @@ export class FieldUI  extends React.Component {
       </div>
     )
   }
-  // componentDidUpdate() {
-  //     window.requestAnimationFrame(()=>{
-  //       this.measureSize()
-  //     })
-  // }
 } 

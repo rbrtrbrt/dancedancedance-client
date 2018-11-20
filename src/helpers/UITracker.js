@@ -4,8 +4,10 @@
 
 */
 
-import {observable, computed, action} from "mobx";
-import { ll, gg, ge } from '../helpers/debug/ll';
+import * as mx from "mobx";
+const {observable, computed, action} = mx;
+import { ll, gg, ge, checkDef } from '../helpers/debug/ll';
+import {vectorLength} from '../helpers/measure';
 export
 class UITracker {
 
@@ -31,11 +33,11 @@ class UITracker {
     startY: null,
     lastDragPanel: null,
     item: null,
+    correctingState: null, // beforeCorrect | correcting | afterCorrect
   })
 
   @computed 
   get dndPanels() {
-    // ll(1,()=>this.app,()=>this)
     return this.app.dndPanels
   }
 
@@ -48,7 +50,10 @@ class UITracker {
   get dndPanelWithMouse() {
     return this.dndPanels.find( panel => panel.containsMouse )
   }
-
+  @computed
+  get canvasDragLocation() {
+    return this.drag.lastDragPanel.clientToCanvas(this.mouseX,this.mouseY);
+  }
   @action.bound
   pointerMoved(evt) {
     if (evt.isPrimary) {
@@ -67,21 +72,29 @@ class UITracker {
   addDndPanels(...panels) {
     panels.forEach(p=>this.dndPanels.push(p))
   }
+  _whenDisposer = null
   @action
   startDrag(evt, model) {
     this.drag.pointerId = evt.pointerId;
     this.drag.item = model;
     this.drag.startX = this.mouseX = evt.clientX;  
     this.drag.startY = this.mouseY = evt.clientY;
+    this.drag.correctingState = "beforeCorrect";
     this.refreshPanelRects()
-    this.drag.lastDragPanel = this.dndPanelWithMouse
+    this.drag.lastDragPanel = this.dndPanelWithMouse;
     document.body.classList.add("noSelect");
     document.body.addEventListener('pointerup', this.endDrag);
     document.body.setPointerCapture(this.drag.pointerId);
-    return this.drag.lastDragPanel.clientToCanvas(this.drag.startX, this.drag.startY);
+    this._whenDisposer = mx.when( ()=> {
+      return this.drag.correctingState === "beforeCorrect" && 
+             vectorLength(this.dragDeltaX, this.dragDeltaY) > 3
+    }, this.startDragCorrecting );
+
+    return this.canvasDragLocation;
   }
   @action.bound
   endDrag(evt) {
+    this._whenDisposer();
     this.mouseX = evt.clientX;
     this.mouseY = evt.clientY;
     document.body.releasePointerCapture(this.drag.pointerId);
@@ -93,6 +106,16 @@ class UITracker {
     this.drag.startX = null;
     this.drag.startY = null;
     this.drag.pointerId = null;
+  }
+  // Called by UI when correcting animation is done.
+  @action.bound 
+  correctingDone() {
+    this.drag.correctingState = "afterCorrect";
+  }
+  // called when drag distance > 3
+  @action.bound 
+  startDragCorrecting() {
+    this.drag.correctingState = "correcting"; 
   }
   @computed
   get dragDeltaX() {

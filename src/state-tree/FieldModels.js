@@ -64,7 +64,6 @@ export const FieldDocModel = ty.model("FieldDocModel", {
       },
       updateLabelWidth(width) {
         _dimensions.labelWidth = width;
-        ll(self.label, ()=> _dimensions.labelWidth)
       }
     }
   }
