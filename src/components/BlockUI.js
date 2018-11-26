@@ -136,7 +136,7 @@ export class DraggingBlocks extends React.Component {
                   to={{xx:0,yy:0}} 
                   from={{ xx: -bi.dragCorrectionX, yy: -bi.dragCorrectionY }} 
                   delay={0}
-                  onRest={bi.correctionRest}>
+                  onRest={uiTracker.correctingDone}>
             {animProps => {
               return <Observer>
                         {()=><BasicDragBlocks blockInfo={bi} xx={dragX+animProps.xx-2} yy={dragY+animProps.yy-2}/>}

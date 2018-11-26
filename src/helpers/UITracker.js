@@ -101,6 +101,7 @@ class UITracker {
     document.body.removeEventListener( 'pointerup', this.endDrag);
     document.body.classList.remove("noSelect");
     this.drag.item.endDrag(...this.drag.lastDragPanel.clientToCanvas(this.mouseX, this.mouseY));
+    this.drag.correctingState = null;
     this.drag.item = null;
     this.drag.lastDragPanel = null;
     this.drag.startX = null;
