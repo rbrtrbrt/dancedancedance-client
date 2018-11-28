@@ -25,11 +25,11 @@ export function vectorLength(dx,dy) {
 }
 
 
-// Higher order component for measuering elements after each render.
+// Higher order component for measuring elements after each render.
 // The following caveats apply:
-// - The wrapped component must be a class-based component. It can't work with functional components.
+// - The wrapped component must be a class-based component. It can't work with functional components, as they can't have refs.
 // - Children do not render by themselves. This component only measures when it re-renders itself. If
-//   children re-render without the parent re-rendering, this HOC will ot re-measure. For example: do not
+//   children re-render without the parent re-rendering, this HOC will not re-measure. For example: do not
 //   use children that are MobX observers. 
 // - The x and y coordinates are from the offsetParent (i.e. the values that you'd use for top: en left: in 
 //   an absolutely positioned element.)
@@ -38,6 +38,9 @@ export function Measuring(CompClass) {
   class Measure extends CompClass {
     constructor(props) {
       super(props);
+      // We use a timeout to delay measuring. During this delay, the component is
+      // sometimes dismounted. To prevent calling findDOMNode() on dismounted components,
+      // we track the mounted-state.
       this.__isMounted = false;
     }
     componentDidUpdate() {
@@ -53,7 +56,7 @@ export function Measuring(CompClass) {
       this.__isMounted = false;
     }
     measure() {
-      window.requestAnimationFrame(()=>{
+      window.setTimeout(() => {  // using requestAnimationFrame sometimes results in incorrect measurements
         if(!this.__isMounted) {
           return;
         }
@@ -62,7 +65,7 @@ export function Measuring(CompClass) {
         const offsetParent = domElement.offsetParent;
         const {top:offsetTop,left:offsetLeft} = offsetParent.getBoundingClientRect();
         this.props.onMeasure({top:top-offsetTop, left:left-offsetLeft, width, height});
-      })
+      }, 0);
     }
   }
   Measure.displayName = "Measuring(" + (CompClass.displayName||CompClass.name) + ")"

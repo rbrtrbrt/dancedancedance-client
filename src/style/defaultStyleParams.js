@@ -19,6 +19,7 @@ const blockFontColor_ghost        = chroma(blockFontColor).brighten(2);
 const fieldLabelColor = chroma(blockFontColor).brighten(1.7);
 const fieldInputColor = blockFontColor;
 const fieldSeparationSpace__px = 4;
+const fieldLabelValueSpace__px = 3;
 
 const allStyleParams =  {
   blockMaxWidth__px,
@@ -36,7 +37,8 @@ const allStyleParams =  {
   blockFontColor_ghost,  
   fieldLabelColor,
   fieldInputColor,
-  fieldSeparationSpace__px
+  fieldSeparationSpace__px,
+  fieldLabelValueSpace__px,
 };
 export const theme = {};
 

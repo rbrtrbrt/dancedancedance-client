@@ -8,84 +8,78 @@ import './style/main.sass';
 import cuid from 'cuid';
 
 import { UITracker } from './helpers/UITracker';
-import { AppViewModel } from './state-tree/AppViewModel';
+import { AppModel } from './state-tree/AppModel';
 import { AppUI } from './components/AppUI';
 import { ll } from './helpers/debug/ll';
 
 console.log("HI THERE!!");
 
-const canvasId=cuid();
 
 const eye1Block = { 
-  id: cuid(), 
-  anchor: { x: 100, y: 100 }, 
   title: "circle",
   fields: [
-    {id: cuid(), fieldName: "x", value: "150"},
-    {id: cuid(), fieldName: "y", value: "100"},
-    {id: cuid(), fieldName: "r", value: "15"},
+    {name: "x", value: "150"},
+    {name: "y", value: "100"},
+    {name: "r", value: "15"},
   ]
 }
 const eye2Block = { 
-  id: cuid(), anchor: { aboveBlock: eye1Block.id }, 
   title: "circle",
   fields: [
-    {id: cuid(), fieldName: "x", value: "200"},
-    {id: cuid(), fieldName: "y", value: "100"},
-    {id: cuid(), fieldName: "r", value: "15"},
+    {name: "x", value: "200"},
+    {name: "y", value: "100"},
+    {name: "r", value: "15"},
   ]
 }
 const noseBlock = { 
-  id: cuid(), anchor: { aboveBlock: eye2Block.id }, 
   title: "line",
   fields: [
-    {id: cuid(), fieldName: "start x", value: "175"},
-    {id: cuid(), fieldName: "start y", value: "120"},
-    {id: cuid(), fieldName: "end x", value: "175"},
-    {id: cuid(), fieldName: "end y", value: "150"},
+    {name: "start x", value: "175"},
+    {name: "start y", value: "120"},
+    {name: "end x", value: "175"},
+    {name: "end y", value: "150"},
   ]
 }
-const mouthBlock = { id: cuid(), anchor: { aboveBlock: noseBlock.id }, 
+const mouthBlock = { 
   title: "arc",
   fields: [
-    {id: cuid(), fieldName: "center x", value: "175"},
-    {id: cuid(), fieldName: "center y", value: "120"},
-    {id: cuid(), fieldName: "width", value: "70"},
-    {id: cuid(), fieldName: "height", value: "80"},
-    {id: cuid(), fieldName: "start angle", value: "225"},
-    {id: cuid(), fieldName: "end angle", value: "315"},
+    {name: "center x", value: "175"},
+    {name: "center y", value: "120"},
+    {name: "width", value: "70"},
+    {name: "height", value: "80"},
+    {name: "start angle", value: "225"},
+    {name: "end angle", value: "315"},
   ]
 }
 
-export const testAppModel = AppViewModel.create({
-  canvas: {
-    id: canvasId,
+export const testAppModel = new AppModel({
+  document: {
     blocks: [
-       eye1Block, eye2Block, noseBlock, mouthBlock,
-      { id: cuid(), anchor: { x: 0, y: 0 }, 
+      [{...eye1Block,x:200,y:200}, eye2Block, noseBlock, mouthBlock],
+      { x: 0, y: 0, 
         title: "open file",
         fields: [
-          {id: cuid(),fieldName: "fileName", value: "~/my-poems.txt"},
-          {id: cuid(),fieldName: "seek position", value: "853"},
+          { name: "fileName", value: "~/my-poems.txt"},
+          { name: "seek position", value: "853"},
         ] 
       },
-      { id: cuid(), anchor: { x: 400, y: 50 }, fields: []},
-      { id: cuid(), anchor: { x: -10, y: 150 },
+      { x: 400, y: 50, title: "Exit program"},
+      { x: -10, y: 150,
         title: "create table column",
         fields: [
-          {id: cuid(),fieldName: "column name", value: "id"},
-          {id: cuid(),fieldName: "type", value: "int"},
-          {id: cuid(),fieldName: "nullable", value: "no"},
-          {id: cuid(),fieldName: "indexed",},
+          {name: "column name", value: "id"},
+          {name: "type", value: "int"},
+          {name: "nullable", value: "no"},
+          {name: "indexed",value: ""},
         ] 
       },
     ]
   },
   editor1: {
-    canvas: canvasId,
+    x:0, y:0
   },
   editor2: {
-    canvas: canvasId,
+    x:-100, y:-100
   }
 });
 
