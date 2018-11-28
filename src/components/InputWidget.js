@@ -52,7 +52,7 @@ export class InputWidget extends React.Component {
 
   render() {
     const { hasFocus } = this.state;
-    const { onChange, value } = this.props;
+    const { value, maxWidth } = this.props;
     const input = this.isActive ? (
       <input
         ref={this.inputRef}
@@ -72,7 +72,7 @@ export class InputWidget extends React.Component {
       >
         <div ref={this.inputBackgroundRef} className="inputBackground">&nbsp;</div>
         {input}
-        <div ref={this.contentViewRef} className="contentView">
+        <div ref={this.contentViewRef} className="contentView" style={{maxWidth}}>
           {value || '\u00a0\u00a0'}
         </div>
       </div>

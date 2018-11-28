@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Page Title</title>
+  <script src="https://unpkg.com/mobx@5.6.0/lib/mobx.umd.js"></script>
+</head>
+<body>
+  <button id="do">Do</button>  
+</body>
+<script>
+
+const log = console.log.bind(console);
+const $ = document.querySelector.bind(document);
+const mx = mobx;
+
+class A{
+  constructor() {
+    this.a = 33;
+    this.b = 44;
+    this.c = {x:1,y:2}
+  }
+}
+mx.decorate(A,{
+  a: mx.observable,
+  b: mx.observable,
+  c: mx.observable
+})
+
+let aa = new A()
+
+mx.autorun( ()=>{
+  log(">x>", aa.c.x )
+  log(">y>", aa.c.y )
+})
+
+$('#do').addEventListener('click', function() {
+  aa.c.x += 1;
+  aa.c.y += 2;
+})
+
+</script>
+</html>

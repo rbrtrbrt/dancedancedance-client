@@ -32,7 +32,7 @@ export class AppUI extends React.Component {
         {(vpy)=>e.viewportY}
       </MobxStatus>
     });
-    const blockStatuses = this.props.appInfo.canvas.blocks.map( b => {
+    const blockStatuses = this.props.appInfo.document.blocks.map( b => {
       return <MobxStatus name={b.debugName}  key={b.debugName}>
         {(x)=>b.x}
         {(y)=>b.y}

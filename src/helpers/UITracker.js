@@ -59,9 +59,9 @@ class UITracker {
     if (evt.isPrimary) {
       this.mouseX = Math.round(evt.x);
       this.mouseY = Math.round(evt.y);
-    }
-    if(this.drag.item) {
-      this.dragMove(evt);
+      if(this.drag.item) {
+        this.dragMove(evt);
+      }
     }
   }
   @action

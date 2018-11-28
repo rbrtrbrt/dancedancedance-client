@@ -1,4 +1,11 @@
-
+window.dontLog = false;
+window.toggleLog = ()=> {
+  window.dontLog = ! window.dontLog
+}
+window.dontCheck = false;
+window.togglecheck = ()=> {
+  window.dontCheck = ! window.dontCheck
+}
 
 function labelAndValue(thing) {
   const anonFunctionRegex = /^\s*\(?\s*(\w*)\s*\)?\s*=>\s*(.*)/
@@ -100,6 +107,9 @@ function showError( caller, label, value, message) {
 }
 
 export function check(thing,message) {
+  if(window.dontCheck) { 
+    return 
+  };
   const [label,value] =  labelAndValue(thing);
   const caller = callerName();
   if(value === false) {
@@ -109,6 +119,9 @@ export function check(thing,message) {
 }
 
 export function checkDef(thing,message) {
+  if(window.dontCheck) { 
+    return 
+  };
   const [label,value] =  labelAndValue(thing);
   const caller = callerName();
   if(value === undefined || value === null) {
@@ -124,9 +137,7 @@ typeNames.set(String, "string");
 typeNames.set(Function, "function");
 typeNames.set(Symbol, "symbol");
 
-export function checkType(thing,type,message) {
-  const [label,value] =  labelAndValue(thing);
-  const caller = callerName();
+function _checkType(value, type) {
   let typeOK = false
   let typeName = typeNames.get(type);
   if(typeName) {
@@ -151,6 +162,31 @@ export function checkType(thing,type,message) {
     typeOK = false;
     typeName = type.name || type.toString()
   }
+  return {typeOK, typeName }
+}
+
+export function checkType(thing,type,message) {
+  if(window.dontCheck) { 
+    return 
+  };
+  const [label,value] = labelAndValue(thing);
+  const caller = callerName();
+  const {typeOK,typeName} = _checkType(value,type)
+  if( !typeOK ) {
+    const errorText = showError(caller,label,value, message||"checkType("+typeName+") failed");
+    throw new Error(errorText);
+  }
+}
+export function checkOptionalType(thing,type,message) {
+  if(window.dontCheck) { 
+    return 
+  };
+  const [label,value] = labelAndValue(thing);
+  if(value === null || value === undefined) {
+    return
+  }
+  const caller = callerName();
+  const {typeOK,typeName} = _checkType(value,type)
   if( !typeOK ) {
     const errorText = showError(caller,label,value, message||"checkType("+typeName+") failed");
     throw new Error(errorText);

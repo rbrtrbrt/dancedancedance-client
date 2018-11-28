@@ -12,13 +12,14 @@ import { Measuring } from "../helpers/measure";
 
 const FieldLabel = Measuring(class FieldLabel extends React.Component {
   render() {
-    return <div className="label">{this.props.text}&nbsp;</div>
+    return <div className="label">{this.props.text}</div>
   }
 })
 
 const FieldValue = Measuring(class FieldValue extends React.Component {
   render() {
-    return <InputWidget value={this.props.value} onChange={this.props.onChange} />
+    const {value, onChange, maxWidth} = this.props;
+    return <InputWidget value={value} onChange={onChange} maxWidth={maxWidth} />
   }
 })
 
@@ -35,8 +36,7 @@ class BasicFieldUI extends React.Component {
     const field = this.props.fieldInfo
     return (
       <Fragment>
-        <FieldLabel text={field.label} onMeasure={({width})=>field.updateLabelWidth(width)} />
-        <FieldValue value={field.value} onChange={this.onValueChange} onMeasure={({width})=>field.updateValueWidth(width)}/>
+        <FieldLabel text={field.label} onMeasure={({width})=>field.updateLabelWidth(width)} /><FieldValue value={field.value} onChange={this.onValueChange} maxWidth={field.maxValueWidth} onMeasure={({width})=>field.updateValueWidth(width)}/>
       </Fragment>
     )
   }

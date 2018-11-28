@@ -55,6 +55,7 @@ const BlockTitle = Measuring(class BlockTitle extends React.PureComponent {
   }
 })
 
+@observer
 class BlockHeader extends React.Component {
   displayName = "BlockHeader";
   render() {
@@ -135,7 +136,7 @@ export class DraggingBlocks extends React.Component {
           <Spring key="correcting" 
                   to={{xx:0,yy:0}} 
                   from={{ xx: -bi.dragCorrectionX, yy: -bi.dragCorrectionY }} 
-                  delay={0}
+                  config={{precision: 0.5}}
                   onRest={uiTracker.correctingDone}>
             {animProps => {
               return <Observer>
@@ -166,12 +167,20 @@ export class BlockUI extends React.Component {
     const { blockInfo:bi } = this.props;
     const isGhost = bi.isDragging;
     const key = isGhost ? "ghost" : "resting";
-    return ( 
+    const thisBlock = 
       <Spring key={key} 
+        immediate ={bi.isDragging}
         to={{ xx: bi.x, yy: bi.y }}
         from={{ xx: bi.x, yy: bi.y }} >
         {anim => <BasicBlockUI blockInfo={bi} xx={anim.xx} yy={anim.yy} isGhost={isGhost}/>}
       </Spring>
-    )
+    let restBlocks;
+    if(bi.blockBelow) {
+      restBlocks = <BlockUI blockInfo={bi.blockBelow} key={bi.blockBelow.debugName}/>
+    }
+    return [
+      thisBlock,
+      restBlocks
+    ]
   };
 }

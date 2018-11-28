@@ -45,7 +45,7 @@ body.noSelect
   bottom: 0
 
 .editorPanelBackground.isDragPanel
-  filter: brightness(98%)
+  filter: brightness(97%)
 
 
 .editorPanel:nth-child(1)
@@ -84,7 +84,6 @@ body.noSelect
     .blockTitle
       font-weight: 600
       position: absolute
-
 
   .blockBackgroundLight 
     fill: var(--blockBackground_light)
@@ -127,6 +126,8 @@ body.noSelect
       family: "Barlow Semi Condensed"
       size: var(--blockFontSize)
     color: var(--fieldLabelColor)
+    overflow: hidden
+    padding-right: var(--fieldLabelValueSpace)
 
   .inputWidget
     font:
@@ -138,7 +139,7 @@ body.noSelect
     
     .contentView
       max-width: var(--blockHeaderMaxWidth)
-//      overflow: hidden
+      overflow: hidden
 
     &.active > .inputBackground
       background-color: white
