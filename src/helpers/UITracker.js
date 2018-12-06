@@ -1,13 +1,9 @@
-/*  TODO:
-
-  **    handle window deactivation while dragging using window.blur()
-
-*/
-
 import * as mx from "mobx";
 const {observable, computed, action} = mx;
 import { ll, gg, ge, checkDef } from '../helpers/debug/ll';
 import {vectorLength} from '../helpers/measure';
+import { AnchorOnCanvas } from '../state-tree/BlockModel'
+
 export
 class UITracker {
 
@@ -28,13 +24,16 @@ class UITracker {
   @observable
   mouseY = 0;
 
-  drag = observable({
-    startX: null,
-    startY: null,
-    lastDragPanel: null,
-    item: null,
-    correctingState: null, // beforeCorrect | correcting | afterCorrect
-  })
+  @observable
+  drag = null 
+  // this is the interface for 'drag':
+  //   startX: number,
+  //   startY: number,
+  //   lastDragPanel: EditorModel,
+  //   item: BlockModel,
+  //   correctingState:  'beforeDrag' | 'beforeCorrect' | 'correcting' | 'afterCorrect'
+  //   correctionX: number,
+  //   correctionY: number
 
   @computed 
   get dndPanels() {
@@ -52,14 +51,14 @@ class UITracker {
   }
   @computed
   get canvasDragLocation() {
-    return this.drag.lastDragPanel.clientToCanvas(this.mouseX,this.mouseY);
+    return this.drag? this.drag.lastDragPanel.clientToCanvas(this.mouseX,this.mouseY) : null;
   }
   @action.bound
   pointerMoved(evt) {
     if (evt.isPrimary) {
       this.mouseX = Math.round(evt.x);
       this.mouseY = Math.round(evt.y);
-      if(this.drag.item) {
+      if(this.drag) {
         this.dragMove(evt);
       }
     }
@@ -75,22 +74,27 @@ class UITracker {
   _whenDisposer = null
   @action
   startDrag(evt, model) {
-    this.drag.pointerId = evt.pointerId;
-    this.drag.item = model;
-    this.drag.startX = this.mouseX = evt.clientX;  
-    this.drag.startY = this.mouseY = evt.clientY;
-    this.drag.correctingState = "beforeCorrect";
     this.refreshPanelRects()
-    this.drag.lastDragPanel = this.dndPanelWithMouse;
+    this.drag = {
+      lastDragPanel: this.dndPanelWithMouse,
+      pointerId: evt.pointerId,
+      item: model,
+      startX: this.mouseX = Math.round(evt.clientX),
+      startY: this.mouseY = Math.round(evt.clientY),
+      correctingState: "beforeDrag"
+    }
+    // These two lines can't be part of object literal above because
+    // 'get canvasDragLocation()' expects this.drag.lastDragPanel to exist.
+    this.drag.correctionX = model.x - this.canvasDragLocation.x;
+    this.drag.correctionY = model.y - this.canvasDragLocation.y;
+
     document.body.classList.add("noSelect");
     document.body.addEventListener('pointerup', this.endDrag);
     document.body.setPointerCapture(this.drag.pointerId);
     this._whenDisposer = mx.when( ()=> {
-      return this.drag.correctingState === "beforeCorrect" && 
+      return this.drag.correctingState === "beforeDrag" && 
              vectorLength(this.dragDeltaX, this.dragDeltaY) > 3
     }, this.startDragCorrecting );
-
-    return this.canvasDragLocation;
   }
   @action.bound
   endDrag(evt) {
@@ -100,23 +104,26 @@ class UITracker {
     document.body.releasePointerCapture(this.drag.pointerId);
     document.body.removeEventListener( 'pointerup', this.endDrag);
     document.body.classList.remove("noSelect");
-    this.drag.item.endDrag(...this.drag.lastDragPanel.clientToCanvas(this.mouseX, this.mouseY));
-    this.drag.correctingState = null;
-    this.drag.item = null;
-    this.drag.lastDragPanel = null;
-    this.drag.startX = null;
-    this.drag.startY = null;
-    this.drag.pointerId = null;
-  }
-  // Called by UI when correcting animation is done.
-  @action.bound 
-  correctingDone() {
-    this.drag.correctingState = "afterCorrect";
+
+    const location = new AnchorOnCanvas(
+      this.drag.lastDragPanel.document, 
+      this.canvasDragLocation.x - this.drag.correctionX, 
+      this.canvasDragLocation.y - this.drag.correctionY
+    );
+    this.drag.item.endDrag(location);
+    this.drag = null;
   }
   // called when drag distance > 3
   @action.bound 
   startDragCorrecting() {
     this.drag.correctingState = "correcting"; 
+  }
+  // Called by UI when correcting animation is done.
+  @action.bound 
+  correctingDone() {
+    this.drag.correctingState = "afterCorrect";
+    this.drag.correctionX = 0;
+    this.drag.correctionY = 0;
   }
   @computed
   get dragDeltaX() {

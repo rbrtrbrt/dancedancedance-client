@@ -43,15 +43,15 @@ export class AppUI extends React.Component {
       <MobxStatus name="mouse" key="uiTracker">
         {(x)=>uiTracker.mouseX}
         {(y)=>uiTracker.mouseY}
-        {(drag)=>uiTracker.drag.correctingState}
       </MobxStatus>
     ];
-    if(uiTracker.drag.item) {
+    if(uiTracker.drag) {
       const {x,y} = uiTracker.canvasDragLocation
       uiTrackerStatus.push(
         <MobxStatus name="drag" key="uiTracker.drag">
           {(cx)=>x}
           {(cy)=>y}
+          {(drag)=>uiTracker.drag.correctingState}
         </MobxStatus>
       )
     }
@@ -66,7 +66,7 @@ export class AppUI extends React.Component {
           <EditorPanelUI editPanelInfo={appInfo.editor1} key={appInfo.editor1.debugName}/>
           <EditorPanelUI editPanelInfo={appInfo.editor2} key={appInfo.editor2.debugName}/>
         </div>
-        { uiTracker.drag.item ? <DraggingBlocks blockInfo={uiTracker.drag.item}/> : null }
+        { uiTracker.drag ? <DraggingBlocks blockInfo={uiTracker.drag.item}/> : null }
         {this.renderDebugComponents()}
       </Fragment>;
   }
