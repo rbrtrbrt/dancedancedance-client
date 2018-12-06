@@ -52,7 +52,8 @@ export class EditorModel {
   }
   clientToCanvas(x,y) {
     checkDef( this._clientRect );
-    return [x - this._clientRect.left - this.viewportX, y - this._clientRect.top - this.viewportY ];
+    return { x: x - this._clientRect.left - this.viewportX,
+             y: y - this._clientRect.top - this.viewportY };
   }
   @action.bound
   handleWheel(e) {
@@ -67,58 +68,3 @@ export class EditorModel {
     }
   }
 }
-
-// export const EditorViewModel = ty.model("EditorViewModel", {
-//   debugName: ty.maybe(ty.string),
-//   canvas: ty.reference(CanvasDocModel),
-//   viewportX: ty.optional(ty.number,0),
-//   viewportY: ty.optional(ty.number,0),
-// }).extend( self => {
-//   const _measureRef = React.createRef();
-//   let _clientRect = null;
-
-//   return {
-//     views: {
-//       get measureRef() {
-//         return _measureRef;
-//       },
-//       get clientRect() {
-//         return _clientRect;
-//       },
-//       get containsMouse() {
-//         return rectContainsPoint( _clientRect, uiTracker.mouseX, uiTracker.mouseY );
-//       },
-//       get isDragPanel() {
-//         return uiTracker.drag && uiTracker.drag.lastDragPanel === self
-//       }
-//     },
-//     actions: {
-//       afterCreate() {
-//         if(self.debugName == undefined) {
-//           self.debugName = newId("editor")
-//         }
-//       },
-//       refreshClientRect() {
-//         if(_measureRef.current) {
-//           return _clientRect = offsetFromDocument(_measureRef.current);
-//         } else {
-//           return undefined;
-//         }
-//       },
-//       clientToCanvas(x,y) {
-//         return _clientRect && [x - _clientRect.left - self.viewportX, y - _clientRect.top - self.viewportY ]
-//       },
-//       handleWheel(e) {
-//         e.preventDefault();
-//         if (e.ctrlKey) {
-//           // Your zoom/scale factor
-//           ll("Wheelzoom:",(scale) => e.deltaY * 0.01, ()=>e.deltaMode )
-//         } else {
-//           // Your trackpad X and Y positions
-//           self.viewportX += e.deltaX
-//           self.viewportY += e.deltaY
-//         }
-//       },
-//     }
-//   }
-// })

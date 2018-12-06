@@ -9,7 +9,7 @@ import { theme } from "../style/defaultStyleParams";
 import { uniqueName } from "../helpers/nameMaker";
 import cuid from "cuid";
 
-import {ll, checkDef} from "../helpers/debug/ll";
+import {ll, checkDef, checkType, checkOptionalType} from "../helpers/debug/ll";
 
 export class FieldModel {
   @observable fieldName;
@@ -20,13 +20,19 @@ export class FieldModel {
   @observable _measurements = {valueWidth:0,labelWidth:0};
   @observable parent = null;
 
-  constructor({name, value, id, debugName}) {
-    checkDef( ()=> name);
-    checkDef( ()=> value);
+  constructor({name, value, id, debugName}, parent) {
+    checkType( () => name, String);
+    checkType( ()=> value, String);
+    checkOptionalType( ()=> id, String);
+    checkOptionalType( ()=> debugName, String);
     this.fieldName = name;
     this.value = value;
     this.id = id || cuid();
     this.debugName = debugName || uniqueName("Field")
+    if(parent) {
+      this.parent = parent;
+      parent.addField(this);
+    }
   }
 
   @computed get
@@ -49,12 +55,6 @@ export class FieldModel {
   get location() {
     return this.parent.fieldPosition(this);
   }
- 
-  @action
-  attachToParent(parent) {
-    this.parent = parent
-  }
-
   @action.bound
   handleValueChange(value) {
     this.value = value;

@@ -10,7 +10,7 @@
 </body>
 <script>
 
-const log = console.log.bind(console);
+const ll = console.log.bind(console);
 const $ = document.querySelector.bind(document);
 const mx = mobx;
 
@@ -19,25 +19,23 @@ class A{
     this.a = 33;
     this.b = 44;
     this.c = {x:1,y:2}
+    this.d = undefined
+    this.e = null
   }
 }
 mx.decorate(A,{
   a: mx.observable,
   b: mx.observable,
-  c: mx.observable
+  c: mx.observable,
+  d: mx.observable,
+  e: mx.observable,
 })
 
 let aa = new A()
 
-mx.autorun( ()=>{
-  log(">x>", aa.c.x )
-  log(">y>", aa.c.y )
-})
-
-$('#do').addEventListener('click', function() {
-  aa.c.x += 1;
-  aa.c.y += 2;
-})
-
+for (const name in aa) {
+  ll(name, ":", aa[name]);
+}
+ll(aa)
 </script>
 </html>

@@ -24,11 +24,12 @@ const eye1Block = {
   ]
 }
 const eye2Block = { 
-  title: "circle",
+  title: "ellipse",
   fields: [
     {name: "x", value: "200"},
     {name: "y", value: "100"},
-    {name: "r", value: "15"},
+    {name: "rx", value: "15"},
+    {name: "ry", value: "15"},
   ]
 }
 const noseBlock = { 

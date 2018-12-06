@@ -5,76 +5,48 @@ import * as mxr from "mobx-react";
 import { setLogEnabled } from "mobx-react-devtools";
 
 import cuid from "cuid";
+import { uniqueName } from "../helpers/nameMaker";
 import { ll, checkType, checkOptionalType } from "../helpers/debug/ll";
 
-import { BlockModel, createBlockChain } from './BlockModel';
+import { BlockModel, AnchorOnCanvas, AnchorBeneathBlock } from './BlockModel';
 
 export class CanvasModel {
-
 }
 
 export class DocumentModel extends CanvasModel {
   @observable id;
   @observable blocks = [];
 
-  constructor({id,blocks}) {
+  constructor({id, debugName, blocks}) {
     super()
     this.id = id || cuid();
-    blocks = blocks || [];
-    const locationInfo = new Map();
-    for(let blockData of blocks) {
-      let block;
-      if(Array.isArray(blockData)){
-        block = createBlockChain(blockData);
-        const {x,y} = blockData[0];
-        locationInfo.set(block, {x,y});
-      } else {
-        block = new BlockModel(blockData);
-        const {x,y} = blockData;
-        locationInfo.set(block, {x,y});
+    this.debugName = debugName || uniqueName("Document")
+    for(let blocksData of blocks) {
+      if(!Array.isArray(blocksData)) {
+        blocksData = [blocksData];
       }
-      this.blocks.push(block);
-    }
-    for(const block of this.blocks) {
-      block.attachToParent(this, locationInfo.get(block));
+      let parent;
+      blocksData.forEach( (b,idx)=>{
+        let anchor;
+        if(idx===0){
+          anchor = new AnchorOnCanvas(this, b.x,b.y)
+        } else {
+          anchor = new AnchorBeneathBlock(parent)
+        }
+        const block = new BlockModel(b,anchor); // the block will attach itself to parent using 'addBlock()'
+        parent = block;
+      })
     }
   }
   @action 
+  addBlock(b) {
+    this.blocks.push(b);
+  }
+  @action 
   moveBlockToTop(block) {
-    // do {
       const idx = this.blocks.indexOf(block);
       mxu.moveItem(this.blocks,idx,this.blocks.length-1)
-      // block = block.blockBelow
-    // } while(block)
   }
 
 }
-
-// export const CanvasDocModel = ty.model("CanvasDocModel", {
-//   id: ty.identifier,
-//   blocks: ty.array(BlockDocModel)
-// })
-// .extend( self => {
-//   return {
-//     views: {
-//     },
-//     actions: {
-//       afterCreate() {
-//         if(self.id == undefined) {
-//           self.id = cuid();
-//         }
-//       },
-//       add(block) {
-//         blocks.push(block)
-//       },
-//       moveBlockToTop(block) {
-//         do {
-//           const idx = self.blocks.indexOf(block);
-//           mxu.moveItem(self.blocks,idx,self.blocks.length-1)
-//           block = block.blockBelow
-//         } while(block)
-//       }
-//     }
-//   }
-// })
 

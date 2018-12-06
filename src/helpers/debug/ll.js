@@ -81,7 +81,7 @@ function showError( caller, label, value, message) {
     return items.map( itm => {
       if(itm === null) {
         return "null"
-      } else if( itm === "undefined") {
+      } else if( itm === undefined) {
         return "undefined"
       } else if( typeof itm === "function" ) {
         return "function "+itm.name

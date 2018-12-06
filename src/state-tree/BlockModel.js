@@ -19,16 +19,21 @@ import { ll, gg, ge, check, checkDef, checkType, checkOptionalType } from '../he
 
 // Little models describing how a block gets its position:
 
-class LocationOnCanvas {
+export 
+class Anchor {
+
+}
+export 
+class AnchorOnCanvas extends Anchor {
   @observable x = 0; 
   @observable y = 0;
   @observable canvas;
 
-  constructor({canvas, x,y}) {
+  constructor(canvas, x,y) {
+    super()
     checkDef(()=>canvas)
     checkDef(()=>x)
     checkDef(()=>y)
-    ll("constr Location on Canvas",()=>canvas)
     this.canvas = canvas;
     this.x = x;
     this.y = y;
@@ -43,9 +48,11 @@ class LocationOnCanvas {
   }
 }
 
-class LocationBelowBlock {
+export 
+class AnchorBeneathBlock extends Anchor {
   parentBlock = null;
   constructor(parent) {
+    super()
     this.parentBlock = parent
   }
   @computed get
@@ -61,17 +68,6 @@ class LocationBelowBlock {
   }
 }
 
-export function createBlockChain(blockDataList) {
-  checkType(()=>blockDataList, Array);
-  check(()=>blockDataList.length > 0);
-  let [firstBlockData,...restBlocksData] = blockDataList;
-  if(restBlocksData.length>0) {
-    firstBlockData = {blocksBelow: restBlocksData,...firstBlockData}
-  }
-  const firstBlock = new BlockModel(firstBlockData)
-  return firstBlock;
-}
-
 export class BlockModel {
   //= public 
   @observable debugName;  
@@ -81,55 +77,48 @@ export class BlockModel {
   @observable fields = [];
 
   @observable blockBelow = null;
-  @observable dragCorrectionX;
-  @observable dragCorrectionY;
 
   //= private
   @observable _measurements = {titleWidth:0}
 
-  constructor({title, id, fields, blocksBelow, debugName}) {
+  constructor({title, id, debugName, fields}, anchor) {
     checkType( ()=>title, String );
+    checkType( ()=> anchor, Anchor );
     checkOptionalType( ()=> id, String);
     checkOptionalType( ()=> fields, Array);
-    checkOptionalType( ()=> blocksBelow, Array);
     checkOptionalType( ()=> debugName, String);
     this.title = title;
+    this.anchor = anchor;
     this.id = id || cuid();
     this.debugName = debugName || uniqueName("Block");
     fields = fields || [];
-    for(const fieldData of fields) {
-      const f = new FieldModel(fieldData);
-      this.fields.push(f);
+    for(const f of fields) {
+      new FieldModel(f, this); // the field will attach itself to 'this' using 'addField()'
     }
-    if(blocksBelow) {
-      this.blockBelow = createBlockChain(blocksBelow);
-    }
-  }
-  attachToParent(parent, location) {
-    if( parent instanceof BlockModel) {
-      this.anchor = new LocationBelowBlock(parent);
-    } else if(parent instanceof CanvasModel) {
-      this.anchor = new LocationOnCanvas({canvas:parent, ...location})
-    }
-    for(const field of this.fields) {
-      field.attachToParent(this);
-    }
-    if(this.blockBelow) {
-      this.blockBelow.attachToParent(this);
+    if(this.anchor) {
+      this.anchor.parent.addBlock(this);
     }
   }
   get parent() {
-    return this.anchor.parent;
+    return this.anchor && this.anchor.parent;
   }
-  allBlocksBelow = function*(excludeSelf=false) {
-    let block = this;
-    if(excludeSelf) {
-      block = block.blockBelow
+  @action
+  addField(f) {
+    this.fields.push(f);
+  }
+  @action
+  addBlock(b) {
+    if(this.blockBelow) {
+      throw new Error(`Can't handle below-block replacement yet.`);
     }
-    while(block) {
-      yield block;
-      block = block.blockBelow
+    this.blockBelow = b;
+  }
+  @action
+  removeBlock(b) {
+    if(this.blockBelow !== b) {
+      throw new Error(`Can't handle below-block replacement yet.`);
     }
+    this.blockBelow = null;
   }
   @computed get
   width() {
@@ -159,12 +148,19 @@ export class BlockModel {
     }
   }
   @computed get
+  stackDimensions() {
+    let {width, height} = this.blockBelow ? this.blockBelow.stackDimensions : {width:0,height:0};
+    width = Math.max(width, this.width);
+    height = height + this.height; 
+    return {width, height}
+  }
+  @computed get
   blockTitle() {
     return this.title || this.debugName
   }
   @computed get
   isDragging() {
-    return uiTracker.drag.item === this ||
+    return (uiTracker.drag && uiTracker.drag.item === this) ||
            ( this.anchor.parentBlock && this.anchor.parentBlock.isDragging )
   } 
   @computed get
@@ -203,24 +199,31 @@ export class BlockModel {
   }
   @action
   moveToTop() {
+    ll(this.blockTitle, ()=> this.parent)
     this.parent.moveBlockToTop(this);
   }
   @action.bound
   startDrag(evt) {
-    let [x,y] = uiTracker.startDrag(evt, this); // canvas coords
-    this.dragCorrectionX = x - this.anchor.x
-    this.dragCorrectionY = y - this.anchor.y
+    uiTracker.startDrag(evt, this); // canvas coords
   } 
   @action
-  endDrag(x,y) {
-    this.moveToTop();
-    if(uiTracker.drag.correctingState === "beforeCorrect") {
-      this.anchor.moveTo(x-this.dragCorrectionX,y-this.dragCorrectionY);
-    } else {
-      this.anchor.moveTo(x,y);
+  endDrag(location) {
+    if(location instanceof AnchorOnCanvas) {
+      if(this.anchor instanceof AnchorBeneathBlock) {
+        this.parent.removeBlock(this);
+        this.anchor = location;
+        this.parent.addBlock(this);
+      } else if(this.anchor instanceof AnchorOnCanvas) {
+        if(this.anchor.canvas === location.canvas) {
+          this.anchor.moveTo(location.x,location.y);
+        } else {
+          throw new Error(`No support for moving to other canvasses yet`);
+        }
+      } else {
+        throw new Error(`no support for connecting to blocks yet`);
+      }
     }
-    this.dragCorrectionX = null;
-    this.dragCorrectionY = null;
+    this.moveToTop();
   } 
   @action.bound
   updateTitleWidth(width){

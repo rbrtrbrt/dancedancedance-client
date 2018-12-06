@@ -47,11 +47,11 @@ export class AppUI extends React.Component {
       </MobxStatus>
     ];
     if(uiTracker.drag.item) {
-      const [dx,dy] = uiTracker.canvasDragLocation
+      const {x,y} = uiTracker.canvasDragLocation
       uiTrackerStatus.push(
         <MobxStatus name="drag" key="uiTracker.drag">
-          {(cx)=>dx}
-          {(cy)=>dy}
+          {(cx)=>x}
+          {(cy)=>y}
         </MobxStatus>
       )
     }
