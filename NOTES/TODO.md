@@ -1,3 +1,5 @@
+[] bug: block that's picked-up but not dragged lands, when dropped, in wrong location
+[] bug: dragging lower half of stack does not create blockstackbackground or shadow.
 [] scrolling while dragging
 [] handle window deactivation while dragging
 [] background for block-stack

@@ -6,7 +6,7 @@ import * as mxr from "mobx-react";
 import { setLogEnabled } from "mobx-react-devtools";
 
 import { uiTracker } from "../helpers/UITracker";
-import { offsetFromDocument, vectorLength,rectContainsPoint } from "../helpers/measure";
+import { offsetFromDocument, vectorLength,domRectContainsPoint } from "../helpers/measure";
 
 import { uniqueName } from "../helpers/nameMaker";
 import cuid from "cuid";
@@ -36,7 +36,7 @@ export class EditorModel {
   }
   @computed get
   containsMouse() {
-    return rectContainsPoint( this._clientRect, uiTracker.mouseX, uiTracker.mouseY );
+    return domRectContainsPoint( this._clientRect, uiTracker.mouseX, uiTracker.mouseY );
   }
   @computed get 
   isDragPanel() {

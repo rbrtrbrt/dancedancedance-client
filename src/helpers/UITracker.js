@@ -66,6 +66,9 @@ class UITracker {
   @action
   dragMove(evt) {
     this.drag.lastDragPanel = this.dndPanelWithMouse || this.drag.lastDragPanel;
+    this.drag.lastDragPanel.document.visitBlockDropTargets( (target) => {
+      target.respondToBlockDragOver(this.drag.item, this.canvasDragLocation )
+    })
   }
   @action
   addDndPanels(...panels) {
@@ -99,8 +102,8 @@ class UITracker {
   @action.bound
   endDrag(evt) {
     this._whenDisposer();
-    this.mouseX = evt.clientX;
-    this.mouseY = evt.clientY;
+    this.mouseX = Math.round(evt.clientX);
+    this.mouseY = Math.round(evt.clientY);
     document.body.releasePointerCapture(this.drag.pointerId);
     document.body.removeEventListener( 'pointerup', this.endDrag);
     document.body.classList.remove("noSelect");
@@ -109,9 +112,16 @@ class UITracker {
       this.drag.lastDragPanel.document, 
       this.canvasDragLocation.x - this.drag.correctionX, 
       this.canvasDragLocation.y - this.drag.correctionY
-    );
-    this.drag.item.endDrag(location);
-    this.drag = null;
+    ); 
+    const dropResult = this.drag.lastDragPanel.document.visitBlockDropTargets(
+      (target,result) => 
+         target.respondToBlockDrop(this.drag.item) || result,
+      null)
+    if(!dropResult) {
+      throw new Error(`No result found for block drop. At least the canvas should have reported a result for block drop.`)
+    }
+    const [anchor, belowBlock] = dropResult;
+    anchor.insertBlockStackBelow(this.drag.item, belowBlock);    
   }
   // called when drag distance > 3
   @action.bound 

@@ -6,7 +6,7 @@ import * as mxr from "mobx-react";
 import { setLogEnabled } from "mobx-react-devtools";
 
 import { uiTracker } from "../helpers/UITracker";
-
+import { rectContainsPoint } from "../helpers/measure";
 import { uniqueName } from "../helpers/nameMaker";
 import cuid from "cuid";
 
@@ -21,7 +21,16 @@ import { ll, gg, ge, check, checkDef, checkType, checkOptionalType } from '../he
 
 export 
 class Anchor {
-
+  // interface:
+  // get parent
+  // get x
+  // get y
+  // detachBlockStack
+  // insertBockStack
+  @action 
+  detachBlockStack() {
+    
+  }
 }
 export 
 class AnchorOnCanvas extends Anchor {
@@ -50,21 +59,18 @@ class AnchorOnCanvas extends Anchor {
 
 export 
 class AnchorBeneathBlock extends Anchor {
-  parentBlock = null;
+  @observable parent = null;
   constructor(parent) {
     super()
-    this.parentBlock = parent
+    this.parent = parent
   }
   @computed get
   x() {
-    return this.parentBlock.x
+    return this.parent.x
   }
   @computed get
   y() {
-    return this.parentBlock.y + this.parentBlock.height
-  }
-  get parent() {
-    return this.parentBlock;
+    return this.parent.y + this.parent.height
   }
 }
 
@@ -75,6 +81,9 @@ export class BlockModel {
   @observable title;
   @observable anchor;
   @observable fields = [];
+
+  @observable dropRoomNeeded = 0;
+  @observable dropRoomIsAbove = false;
 
   @observable blockBelow = null;
 
@@ -102,6 +111,13 @@ export class BlockModel {
   get parent() {
     return this.anchor && this.anchor.parent;
   }
+  get lastBlockInStack() {
+      return this.blockBelow ?
+        this.blockBelow.lastBlockInStack
+      :
+        this;
+  }
+
   @action
   addField(f) {
     this.fields.push(f);
@@ -128,7 +144,15 @@ export class BlockModel {
   @computed get
   height() {
     const [ ,fieldsHeight, ] = this.fieldsLayout;
-    return fieldsHeight + theme.blockContentMarginY * 2;
+    const basicHeight = fieldsHeight + theme.blockContentMarginY * 2;
+    const heightInclDropRoom = basicHeight + this.dropRoomNeeded
+    return heightInclDropRoom;
+  }
+  @computed get
+  blockHeight() {
+    const [ ,fieldsHeight, ] = this.fieldsLayout;
+    const basicHeight = fieldsHeight + theme.blockContentMarginY * 2;
+    return basicHeight;
   }
   @computed get
   x() {
@@ -194,9 +218,6 @@ export class BlockModel {
     const [ , ,fieldLocs] = this.fieldsLayout;
     return fieldLocs.get(field);
   }
-  setBelowBlock(bBlock) {
-    self.blockBelow = bBlock;
-  }
   @action
   moveToTop() {
     ll(this.blockTitle, ()=> this.parent)
@@ -207,24 +228,52 @@ export class BlockModel {
     uiTracker.startDrag(evt, this); // canvas coords
   } 
   @action
-  endDrag(location) {
-    if(location instanceof AnchorOnCanvas) {
-      if(this.anchor instanceof AnchorBeneathBlock) {
-        this.parent.removeBlock(this);
-        this.anchor = location;
-        this.parent.addBlock(this);
-      } else if(this.anchor instanceof AnchorOnCanvas) {
-        if(this.anchor.canvas === location.canvas) {
-          this.anchor.moveTo(location.x,location.y);
-        } else {
-          throw new Error(`No support for moving to other canvasses yet`);
-        }
-      } else {
-        throw new Error(`no support for connecting to blocks yet`);
-      }
-    }
+  endDrag(anchor) {
+    ll(1,()=>anchor)
     this.moveToTop();
   } 
+  @action
+  respondToBlockDrag(item,{x,y}) {
+    if(! item instanceof BlockModel) {
+      ll(`can't handle dragging non-blocks yet.`, ()=>item)
+    }
+    if(this.isDragging) {
+      return;
+    }
+    if( rectContainsPoint(this, x,y) ) {
+      const stackHeight = item.stackDimensions.height
+      this.dropRoomNeeded = Math.min(stackHeight, theme.blockSingleLineHeight*3);
+      this.dropRoomIsAbove = y < this.y + this.height/2
+    } else if( this.dropRoomNeeded ){
+      this.dropRoomNeeded = 0;
+      this.dropRoomIsAbove = false;
+    }
+  }
+  @action 
+  respondToBlockDrop(item) {
+    if( !this.dropRoomNeeded ){
+      return null; // return nothing: the block must not be dropped here.
+    }
+    let result;
+    if(this.dropRoomIsAbove) {
+      result = [this.anchor, this];
+    } else if(this.blockBelow) {
+      result = [this.blockBelow.anchor, this.blockBelow];
+    } else {
+      result = [new AnchorBeneathBlock(this),null]
+    }
+    this.dropRoomIsAbove = null;
+    this.dropRoomNeeded = 0;
+    return result;
+  }
+  @action visitBlockDropTargets(f,acc) {
+    const resultForThis = f(this,acc);
+    if(!this.blockBelow) {
+      return resultForThis;
+    }
+    const resultForAll = this.blockBelow.visitBlockDropTargets(f,resultForThis)
+    return resultForAll
+  }
   @action.bound
   updateTitleWidth(width){
     this._measurements.titleWidth = width;

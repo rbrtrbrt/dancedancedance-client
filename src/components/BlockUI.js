@@ -30,7 +30,7 @@ export const BlockSVGFilters = () => {
     </svg>
   )
 }
-class BlockBackground extends React.Component {
+class BlockBackground extends React.PureComponent {
   displayName = "BlockBackground";
   render() {
     const { width, height, hover, isGhost, onStartDrag} = this.props;
@@ -49,11 +49,9 @@ class BlockBackground extends React.Component {
     }
 };
 
-
-class BlockStackBackground extends React.Component {
+class BlockStackBackground extends React.PureComponent {
   displayName = "BlockstackBackground";
   render() {
-    ll("render", this.props)
     const { x,y, width, height, hover, isGhost, onStartDrag} = this.props;
     // need to extend the size to prevent clipping of dropshadow
     const filterId = hover ? "filter-blockshadow-drag" : "filter-blockshadow"
@@ -61,9 +59,7 @@ class BlockStackBackground extends React.Component {
                 viewBox={`0 0 ${width} ${height}`} 
                 style={{ position: "absolute", left: x, top: y, overflow: "visible" }} 
                 fill="none" xmlns="http://www.w3.org/2000/svg">
-        { !isGhost ? 
        <rect className="blockBackgroundShadow" x="0" y="0" width={width} height={height} rx="5" onPointerDown={onStartDrag} style={{ filter: "url(#"+filterId+")" }}/>
-       : null}
     </svg>;
     }
 };
@@ -113,7 +109,7 @@ class BasicBlockUI extends React.Component {
     }
     return (
       <div className={classes} style={style} onMouseDown={bi.moveToTop}>
-        <BlockBackground width={bi.width} height={bi.height} 
+        <BlockBackground width={bi.width} height={bi.blockHeight} 
                          hover={bi.isDragging} 
                          onStartDrag={bi.startDrag}
                          isGhost={isGhost} />
@@ -178,6 +174,7 @@ export class BlockUI extends React.Component {
     let { blockInfo:bi, xx,yy,isDragItem, isBelowBlock } = this.props;
     const xAdjustment = xx ? xx-bi.x : 0;
     const yAdjustment = yy ? yy-bi.y : 0;
+    const yDropRoom = bi.dropRoomNeeded && bi.dropRoomIsAbove ? bi.dropRoomNeeded : 0
     const isGhost = bi.isDragging && !isDragItem;
     const key = isGhost ? "ghost" : "resting";
     const isTopBlock = bi.anchor instanceof AnchorOnCanvas;
@@ -202,7 +199,7 @@ export class BlockUI extends React.Component {
     const thisBlock = 
       <Spring key={key} 
         immediate ={bi.isDragging}
-        to={{ xx: bi.x+xAdjustment, yy: bi.y+yAdjustment }}
+        to={{ xx: bi.x+xAdjustment, yy: bi.y+yAdjustment+yDropRoom }}
         from={{ xx: bi.x, yy: bi.y }} >
         {anim => <BasicBlockUI blockInfo={bi} xx={anim.xx} yy={anim.yy} isGhost={isGhost}/>}
       </Spring>

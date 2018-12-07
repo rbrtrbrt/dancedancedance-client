@@ -11,13 +11,14 @@ export function offsetFromDocument(domElement) {
   return rect
 }
 
-export function rectContainsPoint(rect,x,y) {
-  const {left,right,top,bottom} = rect
-  if(x >= left && x < right && y >= top && y < bottom) {
-    return rect;
-  } else {
-    return false;
-  }
+export function domRectContainsPoint(rect,px,py) {
+  const {left,right,top,bottom, x,y,width,height} = rect
+  return px > left && px < right && py > top && py < bottom
+}
+
+export function rectContainsPoint(rect,px,py) {
+  const {x,y,width,height} = rect;
+  return px > x && px < x+width && py > y && py < y+height; 
 }
 
 export function vectorLength(dx,dy) {

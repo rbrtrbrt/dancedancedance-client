@@ -47,6 +47,19 @@ export class DocumentModel extends CanvasModel {
       const idx = this.blocks.indexOf(block);
       mxu.moveItem(this.blocks,idx,this.blocks.length-1)
   }
-
+  @action
+  visitBlockDropTargets(f,acc) {
+    acc = f(this,acc)
+    for(const b of this.blocks) {
+      acc = b.visitBlockDropTargets(f,acc);
+    } 
+    return acc
+  }
+  @action respondToBlockDragOver(item,{x,y}) {
+    return
+  }
+  @action respondToBlockDrop(item,{x,y}) {
+    return [new AnchorOnCanvas(this,x,y),null];
+  }
 }
 

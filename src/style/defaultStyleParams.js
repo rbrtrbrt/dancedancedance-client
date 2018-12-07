@@ -1,16 +1,18 @@
 import chroma from 'chroma-js';
 import { ll } from '../helpers/debug/ll';
 
-const blockMaxWidth__px       = 332;
-const blockLeftTabWidth__px   = 20;
-const blockContentMarginX__px = 6;
-const blockContentMarginY__px = 3;
-const blockHeaderMaxWidth__px = blockMaxWidth__px - blockLeftTabWidth__px - blockContentMarginX__px * 2;
-const blockBackground         = "#F2EFEB";
-const blockBackground_light   = chroma(blockBackground).brighten(0.2);
-const blockFontColor          = "#222222";
-const blockFontSize__px       = 14;
-const blockLineHeight__px     = 17;
+const blockMaxWidth__px         = 332;
+const blockLeftTabWidth__px     = 20;
+const blockContentMarginX__px   = 6;
+const blockContentMarginY__px   = 3;
+const blockHeaderMaxWidth__px   = blockMaxWidth__px - blockLeftTabWidth__px - blockContentMarginX__px * 2;
+const blockBackground           = "#F2EFEB";
+const blockBackground_light     = chroma(blockBackground).brighten(0.2);
+const blockFontColor            = "#222222";
+const blockFontSize__px         = 14;
+const blockLineHeight__px       = 17;
+const blockSingleLineHeight__px = blockLineHeight__px + blockContentMarginY__px * 2;
+ 
 
 const blockBackground_ghost       = chroma(blockBackground).darken(0.3);
 const blockBackground_ghost_light = chroma(blockBackground_ghost).darken(0.2);
@@ -32,6 +34,7 @@ const allStyleParams =  {
   blockFontColor, 
   blockFontSize__px,
   blockLineHeight__px,
+  blockSingleLineHeight__px,
   blockBackground_ghost, 
   blockBackground_ghost_light, 
   blockFontColor_ghost,  
@@ -39,6 +42,7 @@ const allStyleParams =  {
   fieldInputColor,
   fieldSeparationSpace__px,
   fieldLabelValueSpace__px,
+  
 };
 export const theme = {};
 
