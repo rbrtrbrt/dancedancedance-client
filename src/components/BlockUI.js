@@ -6,7 +6,7 @@ import { observer, Observer } from "mobx-react";
 import { Spring } from "react-spring";
 import classnames from "classnames";
 
-import {AnchorOnCanvas} from "../state-tree/BlockModel";
+import { CanvasModel } from "../state-tree/DocumentModel.js";
 import { uiTracker } from '../helpers/UITracker'
 import { FieldUI } from "./FieldUI"
 import { ll, gg, ge, checkDef } from "../helpers/debug/ll";
@@ -33,16 +33,13 @@ export const BlockSVGFilters = () => {
 class BlockBackground extends React.PureComponent {
   displayName = "BlockBackground";
   render() {
-    const { width, height, hover, isGhost, onStartDrag} = this.props;
+    const { width, height, hover, onStartDrag} = this.props;
     // need to extend the size to prevent clipping of dropshadow
     const filterId = hover ? "filter-blockshadow-drag" : "filter-blockshadow"
     return <svg width={width} height={height}  
                 viewBox={`0 0 ${width} ${height}`} 
                 style={{ position: "absolute", top: 0, left: 0,overflow: "visible" }} 
                 fill="none" xmlns="http://www.w3.org/2000/svg">
-        {/* { !isGhost ? 
-       <rect className="blockBackgroundShadow" x="0" y="0" width={width} height={height} rx="5" onPointerDown={onStartDrag} style={{ filter: "url(#"+filterId+")" }}/>
-       : null} */}
         <rect className="blockBackgroundLight" x="0" y="0" width={width} height={height} rx="5" onPointerDown={onStartDrag} />
         <rect className="blockBackgroundDarker" x={theme.blockLeftTabWidth+0.5} y="0.5" width={width - theme.blockLeftTabWidth-1} height={height - 1} rx="5" />
       </svg>;
@@ -52,7 +49,7 @@ class BlockBackground extends React.PureComponent {
 class BlockStackBackground extends React.PureComponent {
   displayName = "BlockstackBackground";
   render() {
-    const { x,y, width, height, hover, isGhost, onStartDrag} = this.props;
+    const { x,y, width, height, hover, onStartDrag} = this.props;
     // need to extend the size to prevent clipping of dropshadow
     const filterId = hover ? "filter-blockshadow-drag" : "filter-blockshadow"
     return <svg width={width} height={height}  
@@ -111,8 +108,7 @@ class BasicBlockUI extends React.Component {
       <div className={classes} style={style} onMouseDown={bi.moveToTop}>
         <BlockBackground width={bi.width} height={bi.blockHeight} 
                          hover={bi.isDragging} 
-                         onStartDrag={bi.startDrag}
-                         isGhost={isGhost} />
+                         onStartDrag={bi.startDrag} />
         <BlockHeader blockInfo={bi}/>
       </div>
     );
@@ -131,8 +127,13 @@ export class DraggingBlocks extends React.Component {
     const dragCorrectionX = uiTracker.drag.correctionX;
     const dragCorrectionY = uiTracker.drag.correctionY;
     let result;
-    switch(uiTracker.drag.correctingState) {
+    switch(uiTracker.drag.phase) {
       case "beforeDrag":
+        result =  ReactDOM.createPortal(
+          <BlockUI blockInfo={bi} xx={dragX+dragCorrectionX-2} yy={dragY+dragCorrectionY-2} isDragItem/>, 
+          document.getElementById("floatPlane"));
+        break;
+      case "beforeCorrect":
         result =  ReactDOM.createPortal(
           <BlockUI blockInfo={bi} xx={dragX+dragCorrectionX-2} yy={dragY+dragCorrectionY-2} isDragItem/>, 
           document.getElementById("floatPlane"));
@@ -158,7 +159,7 @@ export class DraggingBlocks extends React.Component {
           document.getElementById("floatPlane")
         );
       break;
-      default: throw new Error(`unexpected dragState: ${uiTracker.drag.correctingState}`)
+      default: throw new Error(`unexpected dragState: ${uiTracker.drag.phase}`)
     }
     return result;
   }
@@ -177,28 +178,27 @@ export class BlockUI extends React.Component {
     const yDropRoom = bi.dropRoomNeeded && bi.dropRoomIsAbove ? bi.dropRoomNeeded : 0
     const isGhost = bi.isDragging && !isDragItem;
     const key = isGhost ? "ghost" : "resting";
-    const isTopBlock = bi.anchor instanceof AnchorOnCanvas;
+    const isTopBlock = bi.parent instanceof CanvasModel;
     // create the background for a blockstack on the canvas.
     let stackBackground = null;
     if(isTopBlock) {
       const {width,height} = bi.stackDimensions;
       stackBackground = <Spring key={key+"_background"} 
           immediate ={bi.isDragging}
-          to={{ xx: bi.x+xAdjustment, yy: bi.y+yAdjustment }}
-          from={{ xx: bi.x, yy: bi.y }} >
+          to={{ xx: bi.x+xAdjustment, yy: bi.y+yAdjustment, ww: width, hh: height }}
+          from={{ xx: bi.x, yy: bi.y, ww: width, hh: height }} >
             {anim => <BlockStackBackground
               key="stackBackground"
               x={anim.xx} y={anim.yy}
-              width={width} height={height} 
+              width={anim.ww} height={anim.hh} 
               hover={bi.isDragging} 
-              onStartDrag={bi.startDrag}
-              isGhost={isGhost} />
+              onStartDrag={bi.startDrag} />
             }
         </Spring>
     }
     const thisBlock = 
       <Spring key={key} 
-        immediate ={bi.isDragging}
+        immediate ={isDragItem}
         to={{ xx: bi.x+xAdjustment, yy: bi.y+yAdjustment+yDropRoom }}
         from={{ xx: bi.x, yy: bi.y }} >
         {anim => <BasicBlockUI blockInfo={bi} xx={anim.xx} yy={anim.yy} isGhost={isGhost}/>}

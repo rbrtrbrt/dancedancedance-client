@@ -2,7 +2,6 @@ import * as mx from "mobx";
 const {observable, computed, action} = mx;
 import { ll, gg, ge, checkDef } from '../helpers/debug/ll';
 import {vectorLength} from '../helpers/measure';
-import { AnchorOnCanvas } from '../state-tree/BlockModel'
 
 export
 class UITracker {
@@ -31,7 +30,7 @@ class UITracker {
   //   startY: number,
   //   lastDragPanel: EditorModel,
   //   item: BlockModel,
-  //   correctingState:  'beforeDrag' | 'beforeCorrect' | 'correcting' | 'afterCorrect'
+  //   phase:  'beforeDrag' | 'beforeCorrect' | 'correcting' | 'afterCorrect'
   //   correctionX: number,
   //   correctionY: number
 
@@ -66,9 +65,18 @@ class UITracker {
   @action
   dragMove(evt) {
     this.drag.lastDragPanel = this.dndPanelWithMouse || this.drag.lastDragPanel;
-    this.drag.lastDragPanel.document.visitBlockDropTargets( (target) => {
-      target.respondToBlockDragOver(this.drag.item, this.canvasDragLocation )
+    const prevTopmost = this.drag.topmostDropTarget;
+    this.drag.topmostDropTarget = this.drag.lastDragPanel.document.visitBlockDropTargets( (target,prevTopTarget) => {
+      if( target.containsPoint(this.canvasDragLocation) ) {
+        return target;
+      } else {
+        return prevTopTarget;
+      }
     })
+    if(this.drag.topmostDropTarget !== prevTopmost) {
+      prevTopmost && prevTopmost.respondToBlockDragOut && prevTopmost.respondToBlockDragOut()
+    }
+    this.drag.topmostDropTarget.respondToBlockDragOver(this.drag.item, this.canvasDragLocation )
   }
   @action
   addDndPanels(...panels) {
@@ -84,54 +92,56 @@ class UITracker {
       item: model,
       startX: this.mouseX = Math.round(evt.clientX),
       startY: this.mouseY = Math.round(evt.clientY),
-      correctingState: "beforeDrag"
+      phase: "beforeDrag"
     }
     // These two lines can't be part of object literal above because
     // 'get canvasDragLocation()' expects this.drag.lastDragPanel to exist.
     this.drag.correctionX = model.x - this.canvasDragLocation.x;
     this.drag.correctionY = model.y - this.canvasDragLocation.y;
-
     document.body.classList.add("noSelect");
     document.body.addEventListener('pointerup', this.endDrag);
     document.body.setPointerCapture(this.drag.pointerId);
     this._whenDisposer = mx.when( ()=> {
-      return this.drag.correctingState === "beforeDrag" && 
-             vectorLength(this.dragDeltaX, this.dragDeltaY) > 3
+      return this.drag.phase === "beforeDrag" && 
+             vectorLength(this.dragDeltaX, this.dragDeltaY) > 2
     }, this.startDragCorrecting );
   }
   @action.bound
   endDrag(evt) {
+    if(this.drag.phase !== "beforeDrag") {
+      this.mouseX = Math.round(evt.clientX);
+      this.mouseY = Math.round(evt.clientY);
+ 
+      const newLocation = {
+        x: this.canvasDragLocation.x + this.drag.correctionX, 
+        y: this.canvasDragLocation.y + this.drag.correctionY
+      } 
+      // const dropResult = this.drag.lastDragPanel.document.visitBlockDropTargets(
+        // (target,result) => 
+      const dropResult = this.drag.topmostDropTarget.respondToBlockDrop(this.drag.item,newLocation)
+      if(!dropResult) {
+        throw new Error(`No result found for block drop. At least the canvas should have reported a result for block drop.`)
+      }
+      dropResult[0].insertDroppedBlocks(this.drag.item, dropResult[1]);   
+    }
+    if(this.drag.topmostDropTarget.respondToBlockDragOut) {
+      this.drag.topmostDropTarget.respondToBlockDragOut();
+    }
     this._whenDisposer();
-    this.mouseX = Math.round(evt.clientX);
-    this.mouseY = Math.round(evt.clientY);
     document.body.releasePointerCapture(this.drag.pointerId);
     document.body.removeEventListener( 'pointerup', this.endDrag);
     document.body.classList.remove("noSelect");
-
-    const location = new AnchorOnCanvas(
-      this.drag.lastDragPanel.document, 
-      this.canvasDragLocation.x - this.drag.correctionX, 
-      this.canvasDragLocation.y - this.drag.correctionY
-    ); 
-    const dropResult = this.drag.lastDragPanel.document.visitBlockDropTargets(
-      (target,result) => 
-         target.respondToBlockDrop(this.drag.item) || result,
-      null)
-    if(!dropResult) {
-      throw new Error(`No result found for block drop. At least the canvas should have reported a result for block drop.`)
-    }
-    const [anchor, belowBlock] = dropResult;
-    anchor.insertBlockStackBelow(this.drag.item, belowBlock);    
+    this.drag = null;
   }
   // called when drag distance > 3
   @action.bound 
   startDragCorrecting() {
-    this.drag.correctingState = "correcting"; 
+    this.drag.phase = "correcting"; 
   }
   // Called by UI when correcting animation is done.
   @action.bound 
   correctingDone() {
-    this.drag.correctingState = "afterCorrect";
+    this.drag.phase = "afterCorrect";
     this.drag.correctionX = 0;
     this.drag.correctionY = 0;
   }

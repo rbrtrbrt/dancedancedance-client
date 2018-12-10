@@ -1,45 +1,6 @@
 
 
 
- __above topblock:tb__
-  bb = tb;
-__dragb below non-lastblock:np__
-  bb = np.blockBelow
-  lb = dragb.lastblock
-  np.removeBlock(bb)
-  bb.anchor = new AnchorBeneathBlock(lb)
-  lb.addBlock(dragb);
-  fallthrough;
-__dragb below lastblock:np__
-  dragb.anchor = new AnchorBeneathBlock(np)
-  np.addBlock(dragb)
-
-
-
-
-
-
-ab = isAbove ? this.parent
-bb = belowBlock
-db = dragBlock
-lb = lastDragBlock
-
-if(bb) {
-  if(ab) { ab.removeBlock(bb) }
-  bb.anchor = new AnchorBeneathBlock(lb)
-}
-if(ab) {
-  db.anchor = new AnchorBeneathBlock(ab)
-  ab.addBlock(db)
-} else {
-  db.anchor = new AnchorOnCanvas(x,y)
-  canvas.addBlock(db)
-}
-
-
-
-
-
 # models
 
 A Block has several Fields. Fields can be 'inline' (text, number,select,

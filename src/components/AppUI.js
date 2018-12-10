@@ -51,7 +51,7 @@ export class AppUI extends React.Component {
         <MobxStatus name="drag" key="uiTracker.drag">
           {(cx)=>x}
           {(cy)=>y}
-          {(drag)=>uiTracker.drag.correctingState}
+          {(dragPhase)=>uiTracker.drag.phase}
         </MobxStatus>
       )
     }

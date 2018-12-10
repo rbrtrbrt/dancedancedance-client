@@ -6,9 +6,9 @@ import { setLogEnabled } from "mobx-react-devtools";
 
 import cuid from "cuid";
 import { uniqueName } from "../helpers/nameMaker";
-import { ll, checkType, checkOptionalType } from "../helpers/debug/ll";
+import { ll, checkType, checkDef, checkOptionalType } from "../helpers/debug/ll";
 
-import { BlockModel, AnchorOnCanvas, AnchorBeneathBlock } from './BlockModel';
+import { BlockModel } from './BlockModel';
 
 export class CanvasModel {
 }
@@ -16,6 +16,7 @@ export class CanvasModel {
 export class DocumentModel extends CanvasModel {
   @observable id;
   @observable blocks = [];
+  @observable blockLocations = new Map();
 
   constructor({id, debugName, blocks}) {
     super()
@@ -25,27 +26,44 @@ export class DocumentModel extends CanvasModel {
       if(!Array.isArray(blocksData)) {
         blocksData = [blocksData];
       }
-      let parent;
-      blocksData.forEach( (b,idx)=>{
-        let anchor;
-        if(idx===0){
-          anchor = new AnchorOnCanvas(this, b.x,b.y)
-        } else {
-          anchor = new AnchorBeneathBlock(parent)
-        }
-        const block = new BlockModel(b,anchor); // the block will attach itself to parent using 'addBlock()'
+      let parent = this;
+      blocksData.forEach( (b)=>{
+        const block = new BlockModel(b,parent); // the block will attach itself to parent using 'addBlock()'
         parent = block;
       })
     }
   }
   @action 
-  addBlock(b) {
+  addBlock(b,location) {
     this.blocks.push(b);
+    if(!location) {
+      checkType(b.xx,Number);
+      checkType(b.yy,Number);
+      location = {x:b.xx,y:b.yy};
+    }
+    this.blockLocations.set(b,location)
   }
   @action 
-  moveBlockToTop(block) {
+  removeBlock(b) {
+    this.blocks.remove(b);
+    this.blockLocations.delete(b);
+  }
+  @action 
+  moveChildBlockToTop(block) {
       const idx = this.blocks.indexOf(block);
       mxu.moveItem(this.blocks,idx,this.blocks.length-1)
+  }
+  getChildBlockX(child) {
+    return this.blockLocations.get(child).x
+  }
+  getChildBlockY(child) {
+    return this.blockLocations.get(child).y
+  }
+  @action moveChildBlock(child,{x,y}) {
+    this.blockLocations.set(child,{x,y})
+  }
+  containsPoint(point) {
+    return true // Document is ATS-root. Always covers complete editor area.
   }
   @action
   visitBlockDropTargets(f,acc) {
@@ -55,11 +73,34 @@ export class DocumentModel extends CanvasModel {
     } 
     return acc
   }
-  @action respondToBlockDragOver(item,{x,y}) {
-    return
+  @action respondToBlockDragOver(item,{x,y}={}) {
+    // pass
   }
-  @action respondToBlockDrop(item,{x,y}) {
-    return [new AnchorOnCanvas(this,x,y),null];
+  @action respondToBlockDrop(item,location) {
+    return [this,location];
+  }
+  @action insertDroppedBlocks(droppedStack,where) {
+    ll(1,droppedStack,this.debugName,()=>where)
+    if(where instanceof BlockModel) {
+      const location = this.blockLocations.get(where);
+      this.removeBlock(where);
+      const lastBlockInStack = droppedStack.lastBlockInStack
+      where.parent = lastBlockInStack;
+      lastBlockInStack.addBlock(where);
+      droppedStack.parent.removeBlock(droppedStack);
+      droppedStack.parent = this;
+      this.addBlock(droppedStack,location);
+    } else if(droppedStack.parent === this) {
+      checkDef(()=>where.x)
+      checkDef(()=>where.y)
+      this.moveChildBlock(droppedStack,where)
+    } else { // move to free spot on canvas
+      droppedStack.parent.removeBlock(droppedStack);
+      droppedStack.parent = this;
+      checkDef(()=>where.x)
+      checkDef(()=>where.y)
+      this.addBlock(droppedStack,where);      
+    }
   }
 }
 
