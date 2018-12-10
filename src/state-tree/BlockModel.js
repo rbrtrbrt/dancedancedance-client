@@ -17,69 +17,12 @@ import { theme } from "../style/defaultStyleParams";
 
 import { ll, gg, ge, check, checkDef, checkType, checkOptionalType } from '../helpers/debug/ll';
 
-// Little models describing how a block gets its position:
-
-export 
-class Anchor {
-  // interface:
-  // get parent
-  // get x
-  // get y
-  // detachBlockStack
-  // insertBockStack
-  @action 
-  detachBlockStack() {
-    
-  }
-}
-export 
-class AnchorOnCanvas extends Anchor {
-  @observable x = 0; 
-  @observable y = 0;
-  @observable canvas;
-
-  constructor(canvas, x,y) {
-    super()
-    checkDef(()=>canvas)
-    checkDef(()=>x)
-    checkDef(()=>y)
-    this.canvas = canvas;
-    this.x = x;
-    this.y = y;
-  }
-  get parent() {
-    return this.canvas;
-  }
-  @action
-  moveTo(x, y) {
-    this.x = Math.round(x);
-    this.y = Math.round(y);
-  }
-}
-
-export 
-class AnchorBeneathBlock extends Anchor {
-  @observable parent = null;
-  constructor(parent) {
-    super()
-    this.parent = parent
-  }
-  @computed get
-  x() {
-    return this.parent.x
-  }
-  @computed get
-  y() {
-    return this.parent.y + this.parent.height
-  }
-}
-
 export class BlockModel {
   //= public 
   @observable debugName;  
   @observable id;
   @observable title;
-  @observable anchor;
+  @observable parent;
   @observable fields = [];
 
   @observable dropRoomNeeded = 0;
@@ -90,34 +33,24 @@ export class BlockModel {
   //= private
   @observable _measurements = {titleWidth:0}
 
-  constructor({title, id, debugName, fields}, anchor) {
+  constructor({title, id, debugName, fields,x,y}, parent) {
     checkType( ()=>title, String );
-    checkType( ()=> anchor, Anchor );
+    checkType( ()=> parent, Object );
     checkOptionalType( ()=> id, String);
     checkOptionalType( ()=> fields, Array);
     checkOptionalType( ()=> debugName, String);
     this.title = title;
-    this.anchor = anchor;
+    this.parent = parent;
     this.id = id || cuid();
-    this.debugName = debugName || uniqueName("Block");
+    this.debugName = debugName || uniqueName(`Block(${title})`);
     fields = fields || [];
     for(const f of fields) {
       new FieldModel(f, this); // the field will attach itself to 'this' using 'addField()'
     }
-    if(this.anchor) {
-      this.anchor.parent.addBlock(this);
+    if(this.parent) {
+      this.parent.addBlock(this,{x,y});
     }
   }
-  get parent() {
-    return this.anchor && this.anchor.parent;
-  }
-  get lastBlockInStack() {
-      return this.blockBelow ?
-        this.blockBelow.lastBlockInStack
-      :
-        this;
-  }
-
   @action
   addField(f) {
     this.fields.push(f);
@@ -135,6 +68,12 @@ export class BlockModel {
       throw new Error(`Can't handle below-block replacement yet.`);
     }
     this.blockBelow = null;
+  }
+  get lastBlockInStack() {
+    return this.blockBelow ?
+      this.blockBelow.lastBlockInStack
+    :
+      this;
   }
   @computed get
   width() {
@@ -156,15 +95,21 @@ export class BlockModel {
   }
   @computed get
   x() {
-    return this.anchor.x
+    return this.parent.getChildBlockX(this)
   }
   @computed get
   y() {
-    return this.anchor.y
+    return this.parent.getChildBlockY(this)
+  }
+  getChildBlockX(child) {
+    return this.x
+  }
+  getChildBlockY(child) {
+    return this.y + this.height
   }
   @computed get
   distanceFromTopBlock() {
-    const aboveBlock = this.anchor.parentBlock;
+    const aboveBlock = this.parent;
     if(aboveBlock){
       return aboveBlock.distanceFromTopBlock + aboveBlock.height
     } else {
@@ -185,7 +130,7 @@ export class BlockModel {
   @computed get
   isDragging() {
     return (uiTracker.drag && uiTracker.drag.item === this) ||
-           ( this.anchor.parentBlock && this.anchor.parentBlock.isDragging )
+           ( this.parent && this.parent.isDragging )
   } 
   @computed get
   fieldsLayout() {
@@ -218,22 +163,27 @@ export class BlockModel {
     const [ , ,fieldLocs] = this.fieldsLayout;
     return fieldLocs.get(field);
   }
-  @action
+  @action.bound
   moveToTop() {
-    ll(this.blockTitle, ()=> this.parent)
-    this.parent.moveBlockToTop(this);
+    ll(1, this.debugName, this.parent)
+    this.parent.moveChildBlockToTop(this);
+  }
+  moveChildBlockToTop(child) {
+    // pass; blocks in blockstack don't overlap.
   }
   @action.bound
   startDrag(evt) {
+    this.moveToTop();
     uiTracker.startDrag(evt, this); // canvas coords
   } 
   @action
-  endDrag(anchor) {
-    ll(1,()=>anchor)
-    this.moveToTop();
-  } 
+  endDrag() {
+  }
+  containsPoint({x,y}) {
+    return rectContainsPoint(this, x,y)
+  }
   @action
-  respondToBlockDrag(item,{x,y}) {
+  respondToBlockDragOver(item,{x,y}) {
     if(! item instanceof BlockModel) {
       ll(`can't handle dragging non-blocks yet.`, ()=>item)
     }
@@ -242,29 +192,40 @@ export class BlockModel {
     }
     if( rectContainsPoint(this, x,y) ) {
       const stackHeight = item.stackDimensions.height
-      this.dropRoomNeeded = Math.min(stackHeight, theme.blockSingleLineHeight*3);
+      this.dropRoomNeeded = theme.blockSingleLineHeight;
       this.dropRoomIsAbove = y < this.y + this.height/2
-    } else if( this.dropRoomNeeded ){
-      this.dropRoomNeeded = 0;
-      this.dropRoomIsAbove = false;
-    }
+    } 
   }
   @action 
-  respondToBlockDrop(item) {
-    if( !this.dropRoomNeeded ){
-      return null; // return nothing: the block must not be dropped here.
-    }
-    let result;
-    if(this.dropRoomIsAbove) {
-      result = [this.anchor, this];
-    } else if(this.blockBelow) {
-      result = [this.blockBelow.anchor, this.blockBelow];
-    } else {
-      result = [new AnchorBeneathBlock(this),null]
-    }
-    this.dropRoomIsAbove = null;
+  respondToBlockDragOut() {
+    ll(1,this.debugName)
     this.dropRoomNeeded = 0;
-    return result;
+    this.dropRoomIsAbove = false;
+  }
+  @action 
+  respondToBlockDrop(item,location) {
+    ll(1,this.debugName)
+    if( this.dropRoomNeeded ) {
+      let result;
+      if(this.dropRoomIsAbove) {
+        result = [this.parent, this]
+      } else {
+        result = [this, this.blockBelow]
+      }
+      return result;  
+    } else if( this.isDragging ) {
+      let top = this.parent;
+      while(top.isDragging) { top = top.parent };
+      let bottom = this.blockBelow;
+      while(bottom && bottom.isDragging) {bottom = bottom.blockBelow };
+      ll(1,top.debugName,bottom && bottom.debugName)
+      if(bottom == null && top instanceof CanvasModel) {
+        bottom = location;
+      }
+      return [top,bottom]
+    } else {
+      return null;
+    }
   }
   @action visitBlockDropTargets(f,acc) {
     const resultForThis = f(this,acc);
@@ -273,6 +234,20 @@ export class BlockModel {
     }
     const resultForAll = this.blockBelow.visitBlockDropTargets(f,resultForThis)
     return resultForAll
+  }
+  @action 
+  insertDroppedBlocks(droppedStack,blockBelow) {
+    if(blockBelow) {  // connect tails
+      check(blockBelow === this.blockBelow)
+      const lastBlockInStack = droppedStack.lastBlockInStack
+      this.removeBlock(blockBelow);  
+      blockBelow.parent = lastBlockInStack; 
+      lastBlockInStack.addBlock(blockBelow); 
+    }      
+    // connect new stack to this.
+    droppedStack.parent.removeBlock(droppedStack); 
+    droppedStack.parent = this;
+    this.addBlock(droppedStack);
   }
   @action.bound
   updateTitleWidth(width){
