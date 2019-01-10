@@ -22,11 +22,11 @@ export class AppModel {
     checkDef( ()=> document );
     this.document = new DocumentModel(document);
     editor1.document = this.document;
-    editor1.debugName = "LeftEditor";
     this.editor1 = new EditorModel(editor1);
+    this.editor1.debugName = "LeftEditor";
     editor2.document = this.document;
-    editor2.debugName = "RightEditor";
     this.editor2 = new EditorModel(editor2);
+    this.editor2.debugName = "RightEditor";
   }
   @computed get
   dndPanels() {

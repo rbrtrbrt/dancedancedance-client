@@ -74,11 +74,11 @@ body.noSelect
     position: absolute
     max-width: var(--blockHeaderMaxWidth)
     width: var(--blockHeaderMaxWidth)
-    top: calc(var(--blockContentMarginY) * 0.7)
-    left: calc(var(--blockLeftTabWidth) + 6px)
+    top: var(--blockContentMarginY);
+    left: calc(var(--blockLeftTabWidth) + var(--blockContentMarginX))
     font-family: "Barlow"
     font-size: var(--blockFontSize)
-    line-height: var(--blockLineHeight)
+    line-height: var(--blockFontSize)
     color: var(--blockFontColor)
 
     .blockTitle
@@ -90,7 +90,7 @@ body.noSelect
   pointer-events: auto
 
 .blockBackgroundDarker
-  stroke: var(--blockBackground_light)
+  // stroke: var(--blockBackground_light)
   fill: var(--blockBackground)
   pointer-events: auto
   
@@ -99,19 +99,9 @@ body.noSelect
 
 .block.ghost
   opacity: 0.3
-  // .header 
-  //   color: var(--blockFontColor_ghost)
-  // .blockBackgroundLight 
-  //   fill: var(--blockBackground_ghost_light)
-
-  // .blockBackgroundDarker
-  //   stroke: var(--blockBackground_ghost_light)
-  //   fill: var(--blockBackground_ghost)
-
-  // .blockBackgroundShadow
-  //   fill: var(--blockBackground_ghost_light)
-
   
+.dragShadow 
+  filter: drop-shadow(0px 4px 8px #00000050);
 /**  Field  **/
 
 .field
@@ -119,6 +109,9 @@ body.noSelect
   font:
     size: var(--blockFontSize)
   color: var(--fieldLabelColor)
+  // next line is needed to prevent the descenders of letters in child-elements from being cut off.
+  line-height: calc(var(--blockLineHeight) + 3px)
+
 
   .label
     display: inline-block
@@ -126,8 +119,12 @@ body.noSelect
       family: "Barlow Semi Condensed"
       size: var(--blockFontSize)
     color: var(--fieldLabelColor)
-    overflow: hidden
+    overflow-x: hidden
+    overflow-y: hidden
     padding-right: var(--fieldLabelValueSpace)
+    // next 2 lines are needed to prevent the descenders of letters from being cut off.
+    position: relative
+    top: -3px 
 
   .inputWidget
     font:
@@ -136,6 +133,10 @@ body.noSelect
       weight: 500
     color: var(--fieldInputColor)
     max-width: var(--blockHeaderMaxWidth)
+    // next 2 lines are needed to prevent the descenders of letters from being cut off.
+    position: relative
+    top: -3px 
+
     
     .contentView
       max-width: var(--blockHeaderMaxWidth)
@@ -157,15 +158,6 @@ body.noSelect
       background-color: transparent
       max-width: var(--blockHeaderMaxWidth)
 
-
-.block.ghost
-  .field
-    color: inherit
-
-    .label
-      color: inherit
-    .inputWidget
-      color: inherit
 
 
 /** input widget **/

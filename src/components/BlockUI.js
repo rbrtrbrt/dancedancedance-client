@@ -40,8 +40,8 @@ class BlockBackground extends React.PureComponent {
                 viewBox={`0 0 ${width} ${height}`} 
                 style={{ position: "absolute", top: 0, left: 0,overflow: "visible" }} 
                 fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect className="blockBackgroundLight" x="0" y="0" width={width} height={height} rx="5" onPointerDown={onStartDrag} />
-        <rect className="blockBackgroundDarker" x={theme.blockLeftTabWidth+0.5} y="0.5" width={width - theme.blockLeftTabWidth-1} height={height - 1} rx="5" />
+        <rect className="blockBackgroundDarker" x="0" y="0" width={width} height={height} rx="5" onPointerDown={onStartDrag} />
+        {/* <rect className="blockBackgroundDarker" x={theme.blockLeftTabWidth+0.5} y="0.5" width={width - theme.blockLeftTabWidth-1} height={height - 1} rx="5" /> */}
       </svg>;
     }
 };
@@ -91,63 +91,86 @@ class BlockHeader extends React.Component {
 }
 
 // The core block-component, without any animation logic.
+// A block will have its own x and y, but sometimes (e.g. while dragging or animating),
+// we need to show it at another location. That is what the 'dx' and 'dy' props are for.
 @observer
 class BasicBlockUI extends React.Component {
   displayName = "BasicBlockUI";
   render() {
-    const { xx, yy, blockInfo:bi, isGhost } = this.props;
-    const classes = classnames("block", {ghost:isGhost});
-    const style = {}
-    if(bi.isDragging) {
-      style.transform = "translate(" + xx + "px," + yy + "px)"
+    let { blockInfo:block, isDragItem, dx=0, dy=0, jump } = this.props;
+    const xx = block.x + dx;
+    const yy = block.y + dy;
+    let style;
+    if(block.isDragging) {
+      style = { transform: "translate(" + xx + "px," + yy + "px)" }
     } else {
-      style.left = xx
-      style.top = yy
+      style = { left: xx, top: yy }
     }
-    return (
-      <div className={classes} style={style} onMouseDown={bi.moveToTop}>
-        <BlockBackground width={bi.width} height={bi.blockHeight} 
-                         hover={bi.isDragging} 
-                         onStartDrag={bi.startDrag} />
-        <BlockHeader blockInfo={bi}/>
+    const isGhost = block.isDragging && !isDragItem;
+    const classes = classnames("block", {ghost:isGhost});
+    let substack;
+    if( block.substack ) {
+      substack = <BlockStackUI key="substack" stackInfo={block.substack} dx={dx} dy={dy} isDragItem={isDragItem} jump={jump}/>
+    }
+    return [
+      <div className={classes} style={style} onMouseUp={block.bringToTop} key="block">
+        <BlockBackground width={block.width} height={block.height} 
+                         hover={block.isDragging} 
+                         onStartDrag={block.startDrag} />
+        <BlockHeader blockInfo={block}/>
       </div>
-    );
+      ,
+      substack
+    ];
   }
 };
 
-// This component renders a block that is being dragged. It handles positioning and animation of the
+// This component renders a set of blocks that is being dragged. It handles positioning and animation of the
 // dragged block.
 @observer
 export class DraggingBlocks extends React.Component {
   displayName="DraggingBlocks";
+  renderDragBlocks(dx,dy) {
+    const {dragBlocks} = this.props
+    const result = [];
+    let currDY = dy;
+    for(const block of dragBlocks) {
+      const key = block.debugName+"_dragging";
+      result.push(<BasicBlockUI key={key} blockInfo={block} dx={dx} dy={currDY} isDragItem/>)
+      // currDY += block.height
+    }
+    return <div className="dragShadow">{result}</div>;
+  }
   render() {
-    const { blockInfo:bi } = this.props;   
-    const dragX = uiTracker.mouseX
-    const dragY = uiTracker.mouseY
+    const { dragBlocks:bs } = this.props;
+    const origin = uiTracker.drag.firstDragPanel.canvasToClient(0,0);   
+    const dx = uiTracker.dragDeltaX + origin.x
+    const dy = uiTracker.dragDeltaY + origin.y
     const dragCorrectionX = uiTracker.drag.correctionX;
     const dragCorrectionY = uiTracker.drag.correctionY;
+    const blocks = new Array(bs.length);
     let result;
     switch(uiTracker.drag.phase) {
       case "beforeDrag":
         result =  ReactDOM.createPortal(
-          <BlockUI blockInfo={bi} xx={dragX+dragCorrectionX-2} yy={dragY+dragCorrectionY-2} isDragItem/>, 
+          this.renderDragBlocks(dx-2, dy-2),
           document.getElementById("floatPlane"));
         break;
       case "beforeCorrect":
         result =  ReactDOM.createPortal(
-          <BlockUI blockInfo={bi} xx={dragX+dragCorrectionX-2} yy={dragY+dragCorrectionY-2} isDragItem/>, 
+          this.renderDragBlocks(dx-2, dy-2),
           document.getElementById("floatPlane"));
         break;
       case "correcting":
         result = ReactDOM.createPortal(
           <Spring key="correcting" 
-                  from={{ xx: dragCorrectionX-2, yy: dragCorrectionY-2 }} 
-                  to={{xx:0,yy:0}} 
+                  to={{ xx: dragCorrectionX-2, yy: dragCorrectionY-2 }} 
+                  from={{xx:0,yy:0}} 
                   config={{precision: 0.5}}
                   onRest={uiTracker.correctingDone}>
             {animProps => {
               return <Observer>
-                        {()=><BlockUI blockInfo={bi} xx={dragX+animProps.xx} yy={dragY+animProps.yy} isDragItem/>}
+                        {()=>this.renderDragBlocks(dx+animProps.xx,dy+animProps.yy)}
                       </Observer>;
             }}  
           </Spring>, 
@@ -155,7 +178,7 @@ export class DraggingBlocks extends React.Component {
         break;
       case "afterCorrect":
         result = ReactDOM.createPortal(
-          <BlockUI blockInfo={bi} xx={dragX-2} yy={dragY-2} isDragItem/>, 
+          this.renderDragBlocks(dx+dragCorrectionX-2, dy+dragCorrectionY-2),
           document.getElementById("floatPlane")
         );
       break;
@@ -165,53 +188,46 @@ export class DraggingBlocks extends React.Component {
   }
 }
 
-
-// A block will have its own x and y, but sometime (e.g. while dragging or animating),
-// we need to show it at another location. That is what the xx and yy props are for.
 @observer
-export class BlockUI extends React.Component {
-  displayName = "BlockUI";
+export class BlockStackUI extends React.Component {
+  displayName = "BlockStack";
   render() {
-    let { blockInfo:bi, xx,yy,isDragItem, isBelowBlock } = this.props;
-    const xAdjustment = xx ? xx-bi.x : 0;
-    const yAdjustment = yy ? yy-bi.y : 0;
-    const yDropRoom = bi.dropRoomNeeded && bi.dropRoomIsAbove ? bi.dropRoomNeeded : 0
-    const isGhost = bi.isDragging && !isDragItem;
-    const key = isGhost ? "ghost" : "resting";
-    const isTopBlock = bi.parent instanceof CanvasModel;
-    // create the background for a blockstack on the canvas.
-    let stackBackground = null;
-    if(isTopBlock) {
-      const {width,height} = bi.stackDimensions;
-      stackBackground = <Spring key={key+"_background"} 
-          immediate ={bi.isDragging}
-          to={{ xx: bi.x+xAdjustment, yy: bi.y+yAdjustment, ww: width, hh: height }}
-          from={{ xx: bi.x, yy: bi.y, ww: width, hh: height }} >
+    const { stackInfo:stack, isDragItem, dx=0, dy=0 } = this.props;
+    const jump = stack.jump || this.props.jump;
+    const xx = stack.x + dx;
+    const yy = stack.y + dy;
+    const stackKey = stack.debugName;
+    const needsBackground = stack.isCanvasChild ? 1 : 0;
+    const allItems = new Array(stack.blocks.length + needsBackground);
+    if(needsBackground) {
+      allItems[0] = 
+        <Spring key={stackKey} 
+          immediate={jump}
+          from={{ xx: xx, yy: yy, ww: stack.width, hh: stack.height }} 
+          to={{ xx: xx, yy: yy, ww: stack.width, hh: stack.height }} >
             {anim => <BlockStackBackground
-              key="stackBackground"
               x={anim.xx} y={anim.yy}
-              width={anim.ww} height={anim.hh} 
-              hover={bi.isDragging} 
-              onStartDrag={bi.startDrag} />
+              width={anim.ww} height={anim.hh} />
             }
+        </Spring>    
+    }
+    stack.blocks.forEach( (block,idx) => {
+      const blockKey = block.debugName
+      ll("render block in stack", blockKey, ()=>jump);
+      allItems[idx+needsBackground] = 
+        <Spring key={blockKey+idx} 
+          immediate={jump}
+          from={{ xx: block.x, yy: block.y }} 
+          to={{ xx: block.x, yy: block.y }} >
+          {anim => <BasicBlockUI blockInfo={block} dx={anim.xx-block.x+dx} dy={anim.yy-block.y+dy} isDragItem={isDragItem} jump={jump}/>}
         </Spring>
-    }
-    const thisBlock = 
-      <Spring key={key} 
-        immediate ={isDragItem}
-        to={{ xx: bi.x+xAdjustment, yy: bi.y+yAdjustment+yDropRoom }}
-        from={{ xx: bi.x, yy: bi.y }} >
-        {anim => <BasicBlockUI blockInfo={bi} xx={anim.xx} yy={anim.yy} isGhost={isGhost}/>}
-      </Spring>
-    let restBlocks;
-    const bbl = bi.blockBelow
-    if(bi.blockBelow) {
-      restBlocks = <BlockUI blockInfo={bbl} key={bbl.debugName} xx={bbl.x+xAdjustment} yy={bbl.y+yAdjustment} isDragItem={isDragItem} isBelowBlock/>
-    }
-    return [
-      stackBackground,
-      thisBlock,
-      restBlocks
-    ]
-  };
+    })
+    return allItems;
+  }
+  componentDidMount() {
+    this.props.stackInfo.resetJumpFlag()
+  }
+  componentDidUpdate() {
+    this.props.stackInfo.resetJumpFlag()
+  }
 }

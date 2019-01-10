@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <style>
+    svg {
+      position: absolute;
+      left: 40px;
+      top: 20px;
+      overflow: visible;
+    /*   filter: drop-shadow(0px 4px 6px #00000060); */
+    }
+    path {
+      fill: red;
+      stroke: blue;
+      stroke-width: 0;
+    }
+    body {
+      background-color: #fff;
+    }
+    #b {
+      left: 39px;
+      top: 19px;
+    }
+    #rulers path {
+      stroke: black;
+      stroke-width: 1;
+      stroke-opacity:0.3;
+    }
+  </style>
+</head>
+<body>
+  <svg id="b" width=400 height=800 viewBox="-1 -1 400 800">
+    <path id="thePath" d=""/>
+  </svg>
+
+  <svg id="a" width=400 height=800 viewBox="0 0 400 800">
+    <path id="thePath" d=""/>
+  </svg>
+
+  <svg id="rulers" width=400 height=800 viewBox="0 0 400 800">
+    <path d="M 0.5,   -10  L 0.5,   800"/>
+    <path d="M 11.5,  -10  L 11.5,  800"/>
+    <path d="M 211.5, -10  L 211.5, 800"/>
+    <path d="M 331.5, -10  L 331.5, 800"/>
+    <path d="M 261.5, -10  L 261.5, 800"/>
+    <path d="M 54.5,  -10  L 54.5,  800"/>
+    <path d="M -10, 0.5    L 400, 0.5"  />
+    <path d="M -10, 39.5   L 400, 39.5" />
+    <path d="M -10, 100.5  L 400, 100.5"/>
+    <path d="M -10, 219.5  L 400, 219.5"/>
+    <path d="M -10, 240.5  L 400, 240.5"/>
+    <path d="M -10, 279.5  L 400, 279.5"/>
+    <path d="M -10, 300.5  L 400, 300.5"/>
+    <path d="M -10, 311.5  L 400, 311.5"/>
+  </svg>
+
+</body>
+<script>
+myHeights = [ 40,60,120,20,40,20 ]
+myWidths = [200,320,250]
+
+function cBlockBack2(heights, widths,stroke=false) {
+  let tabW = 16
+  let thinArm = 12
+  let bottomArmW = 55
+  let so = stroke ? 1 : 0; // strokeOffset
+  let rad = 5
+  let path = `M ${thinArm+rad},-${so}\n`
+
+  let c1 = `a ${rad+so},${rad+so} 0 0 1  ${rad+so}, ${rad+so}\n`
+  let c2 = `a ${rad+so},${rad+so} 0 0 1 -${rad+so}, ${rad+so}\n`
+  let c3 = `a ${rad-so},${rad-so} 0 0 0 -${rad-so}, ${rad-so}\n`
+  let c4 = `a ${rad-so},${rad-so} 0 0 0  ${rad-so}, ${rad-so}\n`
+  let c5 = `a ${rad+so},${rad+so} 0 0 1 -${rad+so},-${rad+so}\n`
+  let c6 = `a ${rad+so},${rad+so} 0 0 1  ${rad+so},-${rad+so}\n`
+
+  for(idx in widths) {
+    fieldsH = heights[idx*2];
+    stackH = heights[idx*2+1];
+    fieldsW = widths[idx]
+    fieldsTop = `h ${ fieldsW - 2*rad}\n` + c1
+    fieldsRight = `v ${fieldsH - 2*rad}\n` + c2
+    fieldsBottom = `h ${-(fieldsW-2*rad)}\n` + c3
+    stackLeft = `v ${stackH - 2*rad}` + c4
+    path += fieldsTop + fieldsRight + fieldsBottom + stackLeft
+    curY += fieldsH + stackH
+  }
+  path += `H ${bottomArmW - rad}\n` + c1
+  path += `V ${thinArm - rad}\n` + c2
+  path += `H ${rad}\n` + c5
+  path += `V ${rad}\n` + c6 + "Z"
+  return path;
+}   
+
+
+myPath = cBlockBack2(myHeights,myWidths)
+pathEl = document.querySelector("#a #thePath")
+pathEl.style.opacity = "0.5"
+pathEl.style.strokeWidth = "0"
+pathEl.setAttribute("d", myPath );
+
+myPath = cBlockBack2(myHeights,myWidths, true)
+pathEl = document.querySelector("#b #thePath")
+pathEl.style.fill = "black";
+pathEl.style.fillOpacity = "0.0"
+pathEl.style.strokeWidth = "2"
+pathEl.setAttribute("d", myPath );
+
+console.log(myPath)
+
+</script>
+</html>

@@ -8,99 +8,89 @@ import cuid from "cuid";
 import { uniqueName } from "../helpers/nameMaker";
 import { ll, checkType, checkDef, checkOptionalType } from "../helpers/debug/ll";
 
-import { BlockModel } from './BlockModel';
+import { BlockStackModel } from './BlockModel';
 
 export class CanvasModel {
 }
 
 export class DocumentModel extends CanvasModel {
   @observable id;
-  @observable blocks = [];
-  @observable blockLocations = new Map();
+  @observable stacks = [];
+  @observable stackLocations = new Map();
 
-  constructor({id, debugName, blocks}) {
+  constructor({id, blocks}) {
     super()
     this.id = id || cuid();
-    this.debugName = debugName || uniqueName("Document")
+    this.debugName = uniqueName("Document")
     for(let blocksData of blocks) {
       if(!Array.isArray(blocksData)) {
         blocksData = [blocksData];
       }
-      let parent = this;
-      blocksData.forEach( (b)=>{
-        const block = new BlockModel(b,parent); // the block will attach itself to parent using 'addBlock()'
-        parent = block;
-      })
+      const {x,y} = blocksData[0];
+      new BlockStackModel({blocks:blocksData, x,y},this); // the stack will attach itself to parent using 'addStack()'
     }
   }
   @action 
-  addBlock(b,location) {
-    this.blocks.push(b);
+  addStack(stack,location) {
+    this.stacks.push(stack);
     if(!location) {
-      checkType(b.xx,Number);
-      checkType(b.yy,Number);
-      location = {x:b.xx,y:b.yy};
+      checkType(stack.xx,Number);
+      checkType(stack.yy,Number);
+      location = {x:stack.xx,y:stack.yy};
     }
-    this.blockLocations.set(b,location)
+    this.stackLocations.set(stack,location)
   }
   @action 
-  removeBlock(b) {
-    this.blocks.remove(b);
-    this.blockLocations.delete(b);
+  removeStack(stack) {
+    this.stacks.remove(stack);
+    this.stackLocations.delete(stack);
   }
   @action 
-  moveChildBlockToTop(block) {
-      const idx = this.blocks.indexOf(block);
-      mxu.moveItem(this.blocks,idx,this.blocks.length-1)
+  bringStackToTop(stack) {
+      const idx = this.stacks.indexOf(stack);
+      mxu.moveItem(this.stacks, idx, this.stacks.length-1)
   }
-  getChildBlockX(child) {
-    return this.blockLocations.get(child).x
+  getStackX(stack) {
+    return this.stackLocations.get(stack).x
   }
-  getChildBlockY(child) {
-    return this.blockLocations.get(child).y
+  getStackY(stack) {
+    return this.stackLocations.get(stack).y
   }
-  @action moveChildBlock(child,{x,y}) {
-    this.blockLocations.set(child,{x,y})
+  @action 
+  moveStackTo(stack,location) { 
+    ll(1,()=>location)  
+    this.stackLocations.set(stack,location)
   }
-  containsPoint(point) {
+  isDropTarget(point) {
     return true // Document is ATS-root. Always covers complete editor area.
   }
   @action
   visitBlockDropTargets(f,acc) {
     acc = f(this,acc)
-    for(const b of this.blocks) {
-      acc = b.visitBlockDropTargets(f,acc);
+    for(const s of this.stacks) {
+      acc = s.visitBlockDropTargets(f,acc);
     } 
-    return acc
+    return acc;
   }
-  @action respondToBlockDragOver(item,{x,y}={}) {
-    // pass
+  @action
+  getDropLocation(_,dragCursorPos) {
+    return [this,dragCursorPos]
   }
-  @action respondToBlockDrop(item,location) {
-    return [this,location];
-  }
-  @action insertDroppedBlocks(droppedStack,where) {
-    ll(1,droppedStack,this.debugName,()=>where)
-    if(where instanceof BlockModel) {
-      const location = this.blockLocations.get(where);
-      this.removeBlock(where);
-      const lastBlockInStack = droppedStack.lastBlockInStack
-      where.parent = lastBlockInStack;
-      lastBlockInStack.addBlock(where);
-      droppedStack.parent.removeBlock(droppedStack);
-      droppedStack.parent = this;
-      this.addBlock(droppedStack,location);
-    } else if(droppedStack.parent === this) {
-      checkDef(()=>where.x)
-      checkDef(()=>where.y)
-      this.moveChildBlock(droppedStack,where)
-    } else { // move to free spot on canvas
-      droppedStack.parent.removeBlock(droppedStack);
-      droppedStack.parent = this;
-      checkDef(()=>where.x)
-      checkDef(()=>where.y)
-      this.addBlock(droppedStack,where);      
+
+  @action 
+  insertDroppedBlocks(droppedBlocks,position) {
+    const parentStack = droppedBlocks[0].parent
+    if(droppedBlocks[0].indexInStack === 0) {
+      // an existing stack was moved entirely
+      parentStack.moveTo(position,true)
+      return
+    } else {
+      const newStack = new BlockStackModel({blocks:[],...position},this)
+      for(const b of droppedBlocks) {
+        b.parent.removeBlock(b);
+        b.parent = newStack;
+        newStack.addBlock(b);
+      }
     }
   }
 }
-
