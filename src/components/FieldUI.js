@@ -27,7 +27,6 @@ const FieldValue = Measuring(class FieldValue extends React.Component {
 class BasicFieldUI extends React.Component {
   constructor(props) {
     super(props);
-    this.fieldRef = React.createRef();
   }  
   onValueChange = (evt) => {
     this.props.fieldInfo.handleValueChange(evt.target.value);
@@ -36,7 +35,7 @@ class BasicFieldUI extends React.Component {
     const field = this.props.fieldInfo
     return (
       <Fragment>
-        <FieldLabel text={field.label} onMeasure={({width})=>field.updateLabelWidth(width)} /><FieldValue value={field.value} onChange={this.onValueChange} maxWidth={field.maxValueWidth} onMeasure={({width})=>field.updateValueWidth(width)}/>
+        <FieldLabel text={field.label}  onMeasure={({width}) => field.updateLabelWidth(width)} /><FieldValue value={field.value} onChange={this.onValueChange} maxWidth={field.maxValueWidth} onMeasure={({width})=>field.updateValueWidth(width)}/>
       </Fragment>
     )
   }
@@ -52,7 +51,7 @@ export class FieldUI  extends React.Component {
       top: field.location.y
     }
     return (
-      <div className="field" ref={this.fieldRef} style={style}>
+      <div className="field" style={style}>
         <BasicFieldUI fieldInfo={this.props.fieldInfo}/>
       </div>
     )

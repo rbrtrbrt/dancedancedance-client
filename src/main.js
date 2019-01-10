@@ -52,11 +52,34 @@ const mouthBlock = {
     {name: "end angle", value: "315"},
   ]
 }
+const ifBlock = {
+  title: "if",
+  fields: [ {name:"",value:"x < 500"}],
+  substack: [
+    {title: "change", fields: [{name:"",value:"score"},{name:"to",value:"score+10"}]},
+    {title: "print", fields: [{name:"line",value:"Your score=${score}"},{name:"newline",value:"true"}]},
+    {title: "update", fields: [{name:"table",value:"users"},{name:"score",value:"score"},{name:"where",value:"id=current-user"}]},
+    {title: "assert", fields: [{name:"condition",value:"score > 0"},{name:"message",value:'User score is too low.'}]}
+  ]
+}
+
+const whileBlock = {
+  title: "while",
+  fields: [ {name:"",value:"lives > 0"}],
+  substack: [
+    {title: "move", fields: [{name:"steps",value:"2"}]},
+    {title: "jump", fields:  [{name:"ghow",value:"high?"}]},
+  ]
+}
+
+
 
 export const testAppModel = new AppModel({
   document: {
     blocks: [
       [{...eye1Block,x:200,y:200}, eye2Block, noseBlock, mouthBlock],
+      { ...ifBlock,x:50,y:300},
+      { ...whileBlock,x:400,y:300},
       { x: 0, y: 0, 
         title: "open file",
         fields: [
@@ -80,7 +103,7 @@ export const testAppModel = new AppModel({
     x:0, y:0
   },
   editor2: {
-    x:-100, y:-100
+    x:100, y:100
   }
 });
 

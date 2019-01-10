@@ -21,10 +21,10 @@ export class EditorModel {
 
   @observable _clientRect;
 
-  constructor({document,x,y,debugName}) {
+  constructor({document,x,y}) {
     checkDef( ()=>document );
     this.document = document;
-    this.debugName = debugName || uniqueName("Editor");
+    this.debugName = uniqueName("Editor");
     this.viewportX = x;
     this.viewportY = y;
 
@@ -36,6 +36,9 @@ export class EditorModel {
   }
   @computed get
   containsMouse() {
+    if(!this._clientRect) {
+      return false;
+    }
     return domRectContainsPoint( this._clientRect, uiTracker.mouseX, uiTracker.mouseY );
   }
   @computed get 
@@ -52,8 +55,13 @@ export class EditorModel {
   }
   clientToCanvas(x,y) {
     checkDef( this._clientRect );
-    return { x: x - this._clientRect.left - this.viewportX,
-             y: y - this._clientRect.top - this.viewportY };
+    return { x: x - this._clientRect.left + this.viewportX,
+             y: y - this._clientRect.top + this.viewportY };
+  }
+  canvasToClient(x,y) {
+    checkDef( this._clientRect );
+    return { x: x + this._clientRect.left - this.viewportX,
+             y: y + this._clientRect.top - this.viewportY };      
   }
   @action.bound
   handleWheel(e) {
@@ -63,8 +71,8 @@ export class EditorModel {
       ll("Wheelzoom:",(scale) => e.deltaY * 0.01, ()=>e.deltaMode )
     } else {
       // Your trackpad X and Y positions
-      this.viewportX += e.deltaX
-      this.viewportY += e.deltaY
+      this.viewportX -= e.deltaX
+      this.viewportY -= e.deltaY
     }
   }
 }

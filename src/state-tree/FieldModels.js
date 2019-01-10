@@ -20,15 +20,14 @@ export class FieldModel {
   @observable _measurements = {valueWidth:0,labelWidth:0};
   @observable parent = null;
 
-  constructor({name, value, id, debugName}, parent) {
+  constructor({name, value, id}, parent) {
     checkType( () => name, String);
     checkType( ()=> value, String);
     checkOptionalType( ()=> id, String);
-    checkOptionalType( ()=> debugName, String);
     this.fieldName = name;
     this.value = value;
     this.id = id || cuid();
-    this.debugName = debugName || uniqueName("Field")
+    this.debugName = uniqueName(`Field(${name})`)
     if(parent) {
       this.parent = parent;
       parent.addField(this);
@@ -36,7 +35,7 @@ export class FieldModel {
   }
 
   @computed get
-  label() { return this.fieldName+":" }
+  label() { return this.fieldName ? this.fieldName+":" : "" }
 
   @computed get 
   width() {
@@ -70,54 +69,3 @@ export class FieldModel {
     this._measurements.labelWidth = width;
   }
 }
-
-// export const FieldDocModel = ty.model("FieldDocModel", {
-//   debugName: ty.maybe(ty.string),
-//   id: ty.identifier,
-//   fieldName: ty.string,
-//   value: ty.maybe(ty.string),
-// })
-// .extend(self => {
-//   const _dimensions = mx.observable({  // one-field observable object feels easier than boxed value observable.
-//     valueWidth: 0,
-//     labelWidth: 0
-//   })
-//   return {
-//     views: {
-//       get label() {
-//         return self.fieldName + ":";
-//       },
-//       get width() {
-//         return _dimensions.labelWidth + _dimensions.valueWidth;
-//       },
-//       get height() {
-//         return 16;
-//       },
-//       get location() {
-//         return mst.getParentOfType(self,BlockDocModel).fieldPosition(self);
-//       }
-//     },
-//     actions: {
-//       afterCreate() {
-//         if(self.debugName == undefined) {
-//           self.debugName = newId("inputField")
-//         }
-//         if(self.id == undefined) {
-//           self.id = cuid();
-//         }
-//       },
-//       handleValueChange(value) {
-//         self.value = value;
-//       },
-//       // updateFieldWidth(width) {
-//       //   _dimensions.fieldWidth = width;
-//       // },
-//       updateValueWidth(width) {
-//         _dimensions.valueWidth = width;
-//       },
-//       updateLabelWidth(width) {
-//         _dimensions.labelWidth = width;
-//       }
-//     }
-//   }
-// });

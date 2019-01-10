@@ -29,10 +29,12 @@ class UITracker {
   //   startX: number,
   //   startY: number,
   //   lastDragPanel: EditorModel,
-  //   item: BlockModel,
+  //   items: [BlockModel],
   //   phase:  'beforeDrag' | 'beforeCorrect' | 'correcting' | 'afterCorrect'
   //   correctionX: number,
   //   correctionY: number
+  //   dropContainer: Object,
+  //   dropPosition: Number or {x:Number,y:Number} (or String?)
 
   @computed 
   get dndPanels() {
@@ -47,6 +49,14 @@ class UITracker {
   @computed 
   get dndPanelWithMouse() {
     return this.dndPanels.find( panel => panel.containsMouse )
+  }
+  @computed
+  get canvasMouseLocation() {
+    if(this.dndPanelWithMouse) {
+      return this.dndPanelWithMouse.clientToCanvas(this.mouseX,this.mouseY);
+    } else {
+      return {x:null,y:null}
+    }
   }
   @computed
   get canvasDragLocation() {
@@ -65,18 +75,23 @@ class UITracker {
   @action
   dragMove(evt) {
     this.drag.lastDragPanel = this.dndPanelWithMouse || this.drag.lastDragPanel;
-    const prevTopmost = this.drag.topmostDropTarget;
-    this.drag.topmostDropTarget = this.drag.lastDragPanel.document.visitBlockDropTargets( (target,prevTopTarget) => {
-      if( target.containsPoint(this.canvasDragLocation) ) {
-        return target;
-      } else {
-        return prevTopTarget;
-      }
-    })
-    if(this.drag.topmostDropTarget !== prevTopmost) {
-      prevTopmost && prevTopmost.respondToBlockDragOut && prevTopmost.respondToBlockDragOut()
+    const topmostDropTarget = this.drag.lastDragPanel.document.visitBlockDropTargets( 
+      (target,prevTopTarget) => {
+        if( target.isDropTarget(this.canvasDragLocation) ) {
+          return target;
+        } else {
+          return prevTopTarget;
+        }
+      }, null)
+    // ll("target:", topmostDropTarget.debugName)
+    const dragResult = topmostDropTarget.getDropLocation(this.drag.items, this.canvasDragLocation )
+    if(dragResult) {
+      // ll("droploc:", dragResult[0].debugName, dragResult[1])
+      this.drag.dropContainer = dragResult[0]
+      this.drag.dropPosition = dragResult[1]
+    } else {
+      // ll("droploc:", dragResult)
     }
-    this.drag.topmostDropTarget.respondToBlockDragOver(this.drag.item, this.canvasDragLocation )
   }
   @action
   addDndPanels(...panels) {
@@ -84,20 +99,23 @@ class UITracker {
   }
   _whenDisposer = null
   @action
-  startDrag(evt, model) {
+  startDrag(evt, blocks) {
     this.refreshPanelRects()
     this.drag = {
+      firstDragPanel: this.dndPanelWithMouse,
       lastDragPanel: this.dndPanelWithMouse,
       pointerId: evt.pointerId,
-      item: model,
+      items: blocks,
       startX: this.mouseX = Math.round(evt.clientX),
       startY: this.mouseY = Math.round(evt.clientY),
-      phase: "beforeDrag"
+      phase: "beforeDrag",
+      dropContainer: blocks[0].parent,
+      dropPosition: blocks[0].indexInStack,
     }
     // These two lines can't be part of object literal above because
     // 'get canvasDragLocation()' expects this.drag.lastDragPanel to exist.
-    this.drag.correctionX = model.x - this.canvasDragLocation.x;
-    this.drag.correctionY = model.y - this.canvasDragLocation.y;
+    this.drag.correctionX = this.canvasDragLocation.x - blocks[0].x;
+    this.drag.correctionY = this.canvasDragLocation.y - blocks[0].y;
     document.body.classList.add("noSelect");
     document.body.addEventListener('pointerup', this.endDrag);
     document.body.setPointerCapture(this.drag.pointerId);
@@ -111,21 +129,11 @@ class UITracker {
     if(this.drag.phase !== "beforeDrag") {
       this.mouseX = Math.round(evt.clientX);
       this.mouseY = Math.round(evt.clientY);
- 
-      const newLocation = {
-        x: this.canvasDragLocation.x + this.drag.correctionX, 
-        y: this.canvasDragLocation.y + this.drag.correctionY
-      } 
-      // const dropResult = this.drag.lastDragPanel.document.visitBlockDropTargets(
-        // (target,result) => 
-      const dropResult = this.drag.topmostDropTarget.respondToBlockDrop(this.drag.item,newLocation)
-      if(!dropResult) {
-        throw new Error(`No result found for block drop. At least the canvas should have reported a result for block drop.`)
-      }
-      dropResult[0].insertDroppedBlocks(this.drag.item, dropResult[1]);   
-    }
-    if(this.drag.topmostDropTarget.respondToBlockDragOut) {
-      this.drag.topmostDropTarget.respondToBlockDragOut();
+      // const newLocation = {
+      //   x: this.canvasDragLocation.x + this.drag.correctionX, 
+      //   y: this.canvasDragLocation.y + this.drag.correctionY
+      // } 
+      this.drag.dropContainer.insertDroppedBlocks(this.drag.items, this.drag.dropPosition);   
     }
     this._whenDisposer();
     document.body.releasePointerCapture(this.drag.pointerId);
@@ -142,12 +150,12 @@ class UITracker {
   @action.bound 
   correctingDone() {
     this.drag.phase = "afterCorrect";
-    this.drag.correctionX = 0;
-    this.drag.correctionY = 0;
+    // this.drag.correctionX = 0;
+    // this.drag.correctionY = 0;
   }
   @computed
   get dragDeltaX() {
-    if (this.drag.item) {
+    if (this.drag) {
       return this.mouseX - this.drag.startX;
     } else {
       throw new Error(`Can't get dragX if not dragging.`)
@@ -155,11 +163,24 @@ class UITracker {
   }
   @computed
   get dragDeltaY() {
-    if (this.drag.item) {
+    if (this.drag) {
       return this.mouseY - this.drag.startY;
     } else {
       throw new Error(`Can't get dragY if not dragging.`)
     }
+  }
+  @computed 
+  get allDragBlocks() {
+    if(!this.drag) {
+      throw new Error(`allDragBlocks called while not dragging.`)
+    }
+    function * allSubBlocks(list) {
+      for(const block of list) {
+        yield * block.allSubBlocks()
+      }
+    }
+    const result = new Set(allSubBlocks(this.drag.items))
+    return result;
   }
 }
 export let uiTracker = null;

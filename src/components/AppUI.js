@@ -32,30 +32,26 @@ export class AppUI extends React.Component {
         {(vpy)=>e.viewportY}
       </MobxStatus>
     });
-    const blockStatuses = this.props.appInfo.document.blocks.map( b => {
-      return <MobxStatus name={b.debugName}  key={b.debugName}>
-        {(x)=>b.x}
-        {(y)=>b.y}
-      </MobxStatus>
-    });
     
     const uiTrackerStatus = [
       <MobxStatus name="mouse" key="uiTracker">
         {(x)=>uiTracker.mouseX}
         {(y)=>uiTracker.mouseY}
+        {(cx)=>uiTracker.canvasMouseLocation.x}
+        {(cy)=>uiTracker.canvasMouseLocation.y}
       </MobxStatus>
     ];
     if(uiTracker.drag) {
       const {x,y} = uiTracker.canvasDragLocation
       uiTrackerStatus.push(
         <MobxStatus name="drag" key="uiTracker.drag">
-          {(cx)=>x}
-          {(cy)=>y}
           {(dragPhase)=>uiTracker.drag.phase}
+          {(corr_x)=>uiTracker.drag.correctionX}
+          {(corr_y)=>uiTracker.drag.correctionY}
         </MobxStatus>
       )
     }
-    return [...editorStatuses, ...blockStatuses, ...uiTrackerStatus, <DevTools key="devtools" />];
+    return [...editorStatuses, ...uiTrackerStatus, <DevTools key="devtools" />];
   }
 
   render() {
@@ -66,7 +62,7 @@ export class AppUI extends React.Component {
           <EditorPanelUI editPanelInfo={appInfo.editor1} key={appInfo.editor1.debugName}/>
           <EditorPanelUI editPanelInfo={appInfo.editor2} key={appInfo.editor2.debugName}/>
         </div>
-        { uiTracker.drag ? <DraggingBlocks blockInfo={uiTracker.drag.item}/> : null }
+        { uiTracker.drag ? <DraggingBlocks dragBlocks={uiTracker.drag.items}/> : null }
         {this.renderDebugComponents()}
       </Fragment>;
   }
