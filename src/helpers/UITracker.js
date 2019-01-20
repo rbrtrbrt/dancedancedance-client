@@ -2,6 +2,7 @@ import * as mx from "mobx";
 const {observable, computed, action} = mx;
 import { ll, gg, ge, checkDef } from '../helpers/debug/ll';
 import {vectorLength} from '../helpers/measure';
+import {BlockModel} from '../state-tree/BlockModel.js'
 
 export
 class UITracker {
@@ -83,10 +84,9 @@ class UITracker {
           return prevTopTarget;
         }
       }, null)
-    // ll("target:", topmostDropTarget.debugName)
     const dragResult = topmostDropTarget.getDropLocation(this.drag.items, this.canvasDragLocation )
     if(dragResult) {
-      // ll("droploc:", dragResult[0].debugName, dragResult[1])
+      // ll("droploc:", dragResult[0], dragResult[1])
       this.drag.dropContainer = dragResult[0]
       this.drag.dropPosition = dragResult[1]
     } else {

@@ -20,7 +20,6 @@ import { ll, gg, ge, check, checkDef, checkType, checkOptionalType } from '../he
 export class BlockStackModel {
   @observable debugName;  
   @observable id;
-  @observable location;
   @observable blocks = [];
   jump = true;  // The nest render should not use animation. Not observable cause an update should not cause a re-render.
 
@@ -52,9 +51,14 @@ export class BlockStackModel {
       this.parent.removeStack(this);
     }
   }
-  @computed get 
-  isCanvasChild() {
+  @computed 
+  get isCanvasChild() {
     return this.parent instanceof CanvasModel;
+  }
+  @computed
+  get topBlockStack() {
+    return this.isCanvasChild ? this 
+                              : this.parent.topBlockStack;
   }
   @action 
   moveTo(location, jump = false) { 
@@ -68,36 +72,42 @@ export class BlockStackModel {
   bringToTop() {
     this.parent.bringStackToTop(this)
   }
-  getBlockX(block) {
-    return this.x;
-  }
-  getBlockY(block) {
-    const [ , , blockLocations] = this.blocksLayout;
-    return blockLocations.get(block)+this.y;
+  getBlockPosition(block) {
+    const {blockPositions} = this.blocksLayout;
+    const {x,y} = blockPositions.get(block);
+    return {x: x+this.x, y: y+this.y};
   }
   blockIndex(block) {
     return this.blocks.indexOf(block);
   }
-  @computed get
-  x() {
-    return this.parent.getStackX(this)
+  @computed 
+  get stackDepth() {
+    if(this.parent.blockDepth) {
+      return this.parent.blockDepth + 1
+    } else {
+      return 0;
+    }
   }
-  @computed get
-  y() {
-    return this.parent.getStackY(this)
+  //@computed 
+  get x() {
+    return this.parent.getStackPosition(this).x;
+  }
+  //@computed 
+  get y() {
+    return this.parent.getStackPosition(this).y;
   }  
-  @computed get
-  width() {
-    const [blocksWidth, , ] = this.blocksLayout;
-    return blocksWidth || 50;
+  @computed 
+  get width() {
+    const {width} = this.blocksLayout;
+    return width;
   }
-  @computed get
-  height() {
-    const [ ,blocksHeight, ] = this.blocksLayout;
-    return blocksHeight || 10;
+  @computed 
+  get height() {
+    const {height} = this.blocksLayout;
+    return Math.max(height,theme.blockEmptyStackHeight);
   }
-  @computed get
-  hasDropGap() {
+  @computed 
+  get hasDropGap() {
     if(!uiTracker.drag) return false; // no gap if not dragging
     const { dropContainer, dropPosition } = uiTracker.drag;
     if( dropContainer !== this ) return false; // no gap if dragging over different stack;
@@ -109,33 +119,47 @@ export class BlockStackModel {
     if(blockAfter && blockAfter.isDragging) return false;
     return true;
   } 
-  @computed get
-  blocksLayout() {
-    const blockLocations = new Map();
+  @computed 
+  get blocksLayout() {
+    const blockPositions = new Map();
     let currY = 0;
     let maxWidth = 0;
     this.blocks.forEach( (block,idx)=>{
+      if(idx > 0) {
+        currY += theme.blockMargin;
+      }
       if(this.hasDropGap && uiTracker.drag.dropPosition === idx) {
         currY += theme.blockSingleLineHeight;
       }
-      blockLocations.set(block, currY);
+      blockPositions.set(block, {x:0, y:currY});
       currY += block.height;
-      maxWidth = Math.max(maxWidth, block.width)
+      maxWidth = Math.max(maxWidth, block.width);
     })
     if(this.hasDropGap && uiTracker.drag.dropPosition === this.blocks.length) {
       currY += theme.blockSingleLineHeight;
     }
-    return [maxWidth, currY, blockLocations];
+    return {width: maxWidth, height: currY, blockPositions};
   }
   isDropTarget({x,y}) {
-    return rectContainsPoint(this, x,y)
+    if(this.parent.blockTitle) {
+    }
+    if(y<this.y) return false;
+    if(y>this.y+this.height) return false;
+    if( x < this.topBlockStack.x)             
+      return false;
+    if( x > this.topBlockStack.x + this.topBlockStack.width) 
+      return false; 
+    return true;
   }
   getDropLocation(_,dragCursorPos) {
-    // If the blockstack was the topmost item containing the cursor,
-    // the cursor is over the current dropgap, so we can return basically the current drop location.
-    return [this, uiTracker.drag.dropPosition ]
+    if(this.blocks.length==0) {
+      return [this,0]  // over an empty C-block
+    } else { // over dropGap
+      return [this,uiTracker.drag.dropPosition]
+    }
   }
-  @action visitBlockDropTargets(f,acc) {
+  @action 
+  visitBlockDropTargets(f,acc) {
     acc = f(this,acc);
     for(const b of this.blocks) {
       acc = b.visitBlockDropTargets(f,acc);
@@ -160,6 +184,90 @@ export class BlockStackModel {
     })
   }
 }
+class FieldSetModel {
+  @observable debugName;  
+  @observable id;
+  @observable title;
+  @observable fields = [];
+
+  @observable _measurements = {titleWidth:0}
+
+  constructor({title, id, fields}, parent) {
+    checkType( ()=> parent, Object );
+    checkOptionalType( ()=> id, String);
+    checkType( ()=> title, String );
+    checkOptionalType( ()=> fields, Array);
+    this.parent = parent;
+    this.id = id || cuid();
+    this.title = title;
+    this.debugName = uniqueName(`FieldSet(${title})`);
+    this.fields = [];
+    for(const f of fields||[]) {
+      new FieldModel(f, this); // the field will attach itself to this FieldSet using 'addField()'
+    }
+    if(this.parent) {
+      this.parent.addFieldSet(this); 
+    }
+  }
+  @action
+  addField(f) {
+    this.fields.push(f)
+  }
+  @computed 
+  get fieldsLayout() {
+    const fieldPositions = new Map();
+    let currX = this._measurements.titleWidth;
+    const maxWidth = theme.blockMaxWidth 
+                     - theme.blockContentPaddingLeft 
+                     - this.parent.blockDepth * (theme.blockVerticalArmWidth + theme.blockMargin);
+    let curWidth = this._measurements.titleWidth;
+    let currY = 0; 
+    let currLineHeight = theme.blockFontSize;
+    this.fields.forEach( (field,idx)=>{
+      const loc = {};
+      const spacedWidth = field.width + ( currX == 0 ? 0 : theme.fieldSeparationSpace)
+      if(currX + spacedWidth > maxWidth) {
+        currX = theme.blockFieldLineIndent; 
+        currY += currLineHeight + theme.blockLineSpace;
+        currLineHeight = theme.blockLineHeight;
+        curWidth = maxWidth;  
+      } else {
+        currX += theme.fieldSeparationSpace
+      }
+      loc.x = currX
+      loc.y = currY
+      currX += field.width
+      curWidth = Math.max(curWidth, currX)
+      currLineHeight = Math.max(currLineHeight,field.height);
+      fieldPositions.set(field,loc);
+    })
+    const result = {width: curWidth, height: currY+currLineHeight,fieldPositions};
+    return result
+  }
+  @computed 
+  get x() {
+    return this.parent.getFieldSetPosition(this).x;
+  }
+  @computed 
+  get y() {
+    return this.parent.getFieldSetPosition(this).y;
+  }
+  get width() {
+    return this.fieldsLayout.width;
+  }
+  get height() {
+    return this.fieldsLayout.height;
+  }
+  fieldPosition(field) {
+    const {x,y} = this.fieldsLayout.fieldPositions.get(field);
+    return {x: x+this.x, y: y+this.y};
+  }
+  @action.bound
+  updateTitleWidth(width){
+    this._measurements.titleWidth = width;
+  }
+}
+
 
 export class BlockModel {
   //= public 
@@ -167,147 +275,176 @@ export class BlockModel {
   @observable id;
   @observable title;
   @observable parent;
-  @observable fields = [];
-  @observable substack;
+  @observable segments;
 
   //= private
-  @observable _measurements = {titleWidth:0}
+  @observable _measurements = {finalArmLabelWidth:0}
 
-
-  //todo: replace members 'fields' and 'substack' with 'segments', and have constructor add fields/substack init values as first segment.
-  constructor({title, id, fields, substack}, parent) {
-    checkType( ()=>title, String );
+  // A block can contain multiple segments. Each segment has a title, an optional list of fields 
+  // and a substack (list of blocks in the 'C'). If there is only one segment, the substack is also optional.
+  // For convenience, members of first segment can 
+  // be specified directly.
+  // To specify that a segment has no C-slot, use 'undefined' for the stack. To specify that it /has/ a C-slot, 
+  // but that the slot is empty, use an empty array []. 
+  constructor({title, id, fields, substack, segments}, parent) {
     checkType( ()=> parent, Object );
     checkOptionalType( ()=> id, String);
+    checkOptionalType( ()=> title, String );
     checkOptionalType( ()=> fields, Array);
     checkOptionalType( ()=> substack, Array);
-    this.title = title;
+    checkOptionalType( ()=> segments, Array);
     this.parent = parent;
     this.id = id || cuid();
     this.debugName = uniqueName(`Block(${title})`);
-    fields = fields || [];
-    for(const f of fields) {
-      new FieldModel(f, this); // the field will attach itself to 'this' using 'addField()'
+    segments = segments || [];
+    if(title || fields || substack) {
+      segments.unshift({title,fields,stack:substack});
     }
-    if(substack) {
-      new BlockStackModel({blocks: substack}, this) // the stack will attach itself to 'this' using 'addStack()'
+    this.debugName = uniqueName(`Block(${segments[0].title})`);
+    this.segments = [];
+    segments.forEach(segmentData => {
+      checkType(()=>segmentData.title, String);
+      checkOptionalType(()=> segmentData.fields, Array);
+      checkOptionalType(()=> segmentData.stack, Array);
+      if(segments.length !==1 ) { // substack not optional when multiple segments. 
+        checkDef(segmentData.stack);
+      }
+    })
+    for(const segmentData of segments) {
+      new FieldSetModel( {title: segmentData.title, fields: segmentData.fields}, this );
+      if(segmentData.stack) {
+        new BlockStackModel({blocks: segmentData.stack}, this) // the stack will attach itself to last segment using 'addStack()'
+      }
     }
     if(this.parent) {
       this.parent.addBlock(this);
     }
   }
-  //todo: how to specify /which/ segment to add the field to?
-  @action
-  addField(f) {
-    this.fields.push(f);
+  @action  
+  addFieldSet(fieldSet,segmentIdx) {
+    if(segmentIdx==undefined){
+      segmentIdx = this.segments.length-1;
+    }
+    if(this.segments[segmentIdx] && this.segments[segmentIdx].fieldSet == undefined) {
+      this.segments[segmentIdx].fieldSet = fieldSet
+    } else {
+      this.segments.push( {fieldSet} );
+    }
   }
-  //todo: how to specify /which/ segment to add the stack to?
   @action 
-  addStack(stack,location) {
-    this.substack = stack;
+  addStack(stack) {  //todo: better semantics for addStack and addFieldSet
+    const segmentIdx = this.segments.length-1;
+    if(this.segments[segmentIdx].stack == undefined) {
+      this.segments[segmentIdx].stack = stack
+    } else {
+      throw new Error(`Can only add stack to block if last segment has no stack yet.`)
+      //this.segments.push( {stack} );
+    }
   }
-  //todo: how to specify /which/ segment to remove the stack from?
-  //todo: perhaps its better not to remove the substack, just leave it empty.
-  //      (this means we're never moving substacks, just blocks and their dependents)
-  @action 
-  removeStack(stack) {
-    this.substack = null;
+  @computed
+  get topBlockStack() {
+    return this.parent.topBlockStack
+  }
+  @computed
+  get segmentsLayout() {
+    let fieldSetPositions = new Map();
+    let subStackPositions = new Map();
+    let currY = 0;
+    let currWidth = 0;
+    for( const {fieldSet,stack} of this.segments ) {
+      currY += theme.blockContentPaddingY;
+      const fieldsLayout = fieldSet.fieldsLayout;
+      const fieldsWidth = theme.blockContentPaddingLeft + fieldsLayout.width + theme.blockContentPaddingRight;
+      const fPos = { 
+        x: theme.blockContentPaddingLeft, y: currY
+      };
+      fieldSetPositions.set(fieldSet, fPos);
+      currY += fieldsLayout.height + theme.blockContentPaddingY;
+      currWidth = Math.max(currWidth, fieldsWidth);
+      if( stack !== undefined) {
+        currY += theme.blockMargin
+        const sPos = {
+          x: theme.blockSubStackIndent, y: currY 
+        }
+        subStackPositions.set(stack, sPos);
+        currY += stack.height + theme.blockMargin; 
+        currWidth = Math.max(currWidth, stack.width + theme.blockSubStackIndent);
+      }
+    }
+    let finalLabelPosition;
+    const finalStack = this.segments[this.segments.length-1].stack // could be missing.
+    if(finalStack) {
+      finalLabelPosition = {x:theme.blockContentPaddingLeft, y: currY-2 }
+      currY += theme.blockFinalArmHeight;
+      currWidth = Math.max(currWidth, this.finalArmWidth);
+    }
+    const result = { width: currWidth, height: currY, fieldSetPositions, subStackPositions, finalLabelPosition }; 
+    return result;
   }
   @action 
   bringStackToTop(stack) {
     // pass; stack inside block doesn't overlap anything.
   }
-  //todo: find segment for provided stack.
-  getStackX(stack) {  
-    return this.x + theme.blockLeftTabWidth;
+  getStackPosition(stack) {  
+    const {x,y} = this.segmentsLayout.subStackPositions.get(stack);
+    return {x: x+this.x, y: y+this.y};
   }
-  //todo: find segment for provided stack.
-  getStackY(stack) { 
-    const [ ,fieldsHeight, ] = this.fieldsLayout;
-    return this.y + theme.blockContentMarginY * 2 + fieldsHeight
+  getFieldSetPosition(fieldSet) {  
+    const {x,y} = this.segmentsLayout.fieldSetPositions.get(fieldSet);
+    return {x: x+this.x, y: y+this.y};
   }
-  @computed get
-  //todo: adjust for having multiple segments
-  //todo: adjust for bottom-arm.
-  width() {
-    const [fieldsWidth, , ] = this.fieldsLayout;
-    const substackWidth = this.substack ? this.substack.width + theme.blockLeftTabWidth : 0;
-    const contentWidth = Math.max(fieldsWidth, substackWidth);
-    return theme.blockLeftTabWidth + contentWidth + theme.blockContentMarginX * 2;
+  @computed 
+  get width() {
+    const {width} = this.segmentsLayout;
+    return width;
   }
-  //todo: adjust for having multiple segments
-  //todo: adjust for bottom-arm.
-  //todo: deal with empty substacks.
-  @computed get
-  height() {
-    const [ ,fieldsHeight, ] = this.fieldsLayout;
-    const substackHeight = this.substack ? this.substack.height : 0;
-    const basicHeight = fieldsHeight + substackHeight + theme.blockContentMarginY * 2;
-    return basicHeight;
+  @computed 
+  get height() {
+    const {height} = this.segmentsLayout;
+    return height;
   }
-  @computed get
-  x() {
-    return this.parent.getBlockX(this)
+  @computed 
+  get x() {
+    return this.parent.getBlockPosition(this).x;
   }
-  @computed get
-  y() {
-    return this.parent.getBlockY(this)
+  @computed 
+  get y() {
+    return this.parent.getBlockPosition(this).y;
   }
-  @computed get
-  indexInStack() {
+  @computed 
+  get indexInStack() {
     return this.parent.blockIndex(this)
   }
-  //todo: use title of first segment
-  @computed get
-  blockTitle() {
-    return this.title
+  @computed 
+  get blockTitle() {
+    return this.segments[0].fieldSet.title
   }
-  @computed get
-  isDragging() {  
+  @computed 
+  get finalArmLabel() {  
+    return "end " + this.blockTitle
+  }
+  @computed 
+  get isDragging() {  
     return uiTracker.drag && uiTracker.allDragBlocks.has(this);
   } 
-  //todo: adjust for mult. segments
   * allSubBlocks() {
     yield this
-    if(this.substack) {
-      for(const sb of this.substack.blocks) {
-        yield sb;
-        yield * sb.allSubBlocks();
+    for(const segm of this.segments) {
+      if(segm.stack) {
+        for(const sb of segm.stack.blocks) {
+          yield sb;
+          yield * sb.allSubBlocks();
+        }
       }
     }
   }
-  //todo: adjust for mult. segments
-  @computed get
-  fieldsLayout() {
-    const fieldLocations = new Map();
-    let currX = this._measurements.titleWidth;
-    let maxWidth = currX;
-    let currY = 0;
-    let lineHeight = 14;
-    this.fields.forEach( (field,idx)=>{
-      const loc = {};
-      const spacedWidth = field.width + ( currX == 0 ? 0 : theme.fieldSeparationSpace)
-      if(currX + spacedWidth > theme.blockHeaderMaxWidth) {
-        currX = 0;
-        currY += lineHeight;
-        lineHeight = 0;
-        maxWidth = theme.blockHeaderMaxWidth;
-      } else {
-        currX += theme.fieldSeparationSpace
-      }
-      loc.x = currX
-      loc.y = currY
-      currX += field.width
-      maxWidth = Math.max(maxWidth, loc.x + field.width)
-      lineHeight = Math.max(lineHeight,field.height);
-      fieldLocations.set(field,loc)
-    })
-    return [maxWidth, currY+lineHeight,fieldLocations];
-  }
-  //todo: adjust for mult. segments
-  fieldPosition(field) {
-    const [ , ,fieldLocs] = this.fieldsLayout;
-    return fieldLocs.get(field);
+  @computed 
+  get blockDepth() {
+    if(this.parent.stackDepth != undefined) {
+      return this.parent.stackDepth
+    } else {
+      throw new Error(`Wierd that a block exists outside of a blockstack.`)
+    }
   }
   @action.bound
   bringToTop() {  
@@ -320,48 +457,95 @@ export class BlockModel {
   } 
   isDropTarget({x,y}) { 
     //todo: memoize this? how?
-    const catchArea = {
-      x: this.parent.x,
-      y: this.y,
-      width: this.parent.width, //TODO: find width of top-blockstack
-      height: this.height 
-    }
-    return rectContainsPoint(catchArea, x,y)
+    const margin = theme.blockMargin;
+    if( y < this.y - margin ) 
+      return false;
+    if( y > this.y + this.height + margin ) 
+      return false;
+    if( x < this.topBlockStack.x)             
+      return false;
+    if( x > this.topBlockStack.x + this.topBlockStack.width) 
+      return false; 
+    if( this.isDragging ) return false;
+    return true;
   }
 
   @action
   getDropLocation(draggedBlocks,dragCursorPos) {
-    //todo: at least abstact this in method, and possibly memoize this.
-    const catchArea = {
-      x: this.parent.x,
-      y: this.y,
-      width: this.parent.width,
-      height: this.height 
-    }
-    //todo: adjust for hovering over bottom-arm
-    //todo: adjust for mult. segments
-    if( rectContainsPoint(catchArea, dragCursorPos.x,dragCursorPos.y) ) {
-      let dropIndex = this.indexInStack;
-      if( dragCursorPos.y > this.y + this.height/2 ) {
-        dropIndex += 1;
+    const {fieldSetPositions} = this.segmentsLayout;
+    const margin = theme.blockMargin;
+    const padding = theme.blockContentPaddingY;
+    const dragY = dragCursorPos.y
+    const segmentIdx = this.segments.findIndex((segm,idx)=>{
+      let {y} = fieldSetPositions.get(segm.fieldSet);
+      y += this.y;
+      if(this.blockTitle=="create table column") {
       }
-      return [this.parent,dropIndex]
-    } else {
-      throw new Error(`Weird: Did not expect getDropLocation() to be called when the mouse is not over it.`)
+      if(dragY < y - padding - margin ) return false;
+      if(dragY > y + padding + segm.fieldSet.height + margin) return false;
+      // no need to check x: this block contains cursor and we don't have blocks side-by-side.
+      return true;
+    })
+    if( segmentIdx > -1 ) {
+      const theSegm = this.segments[segmentIdx];
+      let {y:fieldsY} = fieldSetPositions.get(theSegm.fieldSet);
+      fieldsY += this.y
+      if( dragY < fieldsY + theSegm.fieldSet.height/2) {
+        if(segmentIdx==0) {
+          return [this.parent, this.indexInStack]
+        } else {
+          const prevStack = this.segments[segmentIdx-1].stack
+          return [prevStack,prevStack.length]
+        }
+      } else {
+        if(theSegm.stack == undefined) {
+          check(()=>this.segments.length == 1,"Only blocks with a single fieldset can omit stack")
+          return [this.parent, this.indexInStack+1]
+        }
+        return [theSegm.stack,0]
+      }
+    } else { // no segment/fieldSet found; must be final arm. 
+      const lastSegm = this.segments[ this.segments.length -1];
+      if( lastSegm.stack == undefined ) {
+        throw new Error(`Weird: in drop-target block, cursor not above a fieldset, and there is no final arm.`);
+      }
+      const finalArmHeight = theme.blockFinalArmHeight;
+      const finalTop = this.y + this.height - finalArmHeight - margin; 
+      if( dragY >= finalTop && dragY <= finalTop + finalArmHeight / 2 + margin) {
+        return [lastSegm.stack,lastSegm.stack.blocks.length]
+      } else if( dragY >= finalTop  + finalArmHeight / 2  + margin && dragY <= finalTop + finalArmHeight  + 2*margin)  {
+        const dropIndex = this.indexInStack + 1;
+        return [this.parent, dropIndex]
+      } else {
+          throw new Error(`Weird: in Droptarget block, not on fieldset, not on final arm. "${this.blockTitle}"`)
+      }
     }
   }
   //todo: adjust for mult. segments
-  @action visitBlockDropTargets(f,acc) {
+  @action 
+  visitBlockDropTargets(f,acc) {
     acc = f(this,acc)
-    if( this.substack ) {
-      acc = this.substack.visitBlockDropTargets(f,acc) 
-    } 
+    for( const segm of this.segments ) {
+      if( segm.stack ) {
+        acc = segm.stack.visitBlockDropTargets(f,acc) 
+      } 
+    }
     return acc;
   }
-  //todo: adjust for mult. segments
+  @computed
+  get finalArmWidth() {
+    const realWidth = theme.blockContentPaddingLeft 
+                      + this._measurements.finalArmLabelWidth 
+                      + theme.blockContentPaddingRight;
+    return Math.max(realWidth, theme.blockFinalArmMinWidth);
+  }
+  get finalLabelPosition() {
+    const {finalLabelPosition:{x,y}} = this.segmentsLayout;
+    return {x: this.x+x, y: this.y+y};
+  }
   @action.bound
-  updateTitleWidth(width){
-    this._measurements.titleWidth = width;
+  updateFinalArmWidth(width){
+    this._measurements.finalArmLabelWidth = width;
   }
 } 
 

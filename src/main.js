@@ -58,8 +58,14 @@ const ifBlock = {
   substack: [
     {title: "change", fields: [{name:"",value:"score"},{name:"to",value:"score+10"}]},
     {title: "print", fields: [{name:"line",value:"Your score=${score}"},{name:"newline",value:"true"}]},
-    {title: "update", fields: [{name:"table",value:"users"},{name:"score",value:"score"},{name:"where",value:"id=current-user"}]},
-    {title: "assert", fields: [{name:"condition",value:"score > 0"},{name:"message",value:'User score is too low.'}]}
+  ],
+  segments: [
+    { title: "else",
+      stack: [
+        {title: "update", fields: [{name:"table",value:"users"},{name:"score",value:"score"},{name:"where",value:"id=current-user"}]},
+        {title: "assert", fields: [{name:"condition",value:"score > 0"},{name:"message",value:'User score is too low.'}]}
+      ]
+    }
   ]
 }
 
@@ -79,7 +85,7 @@ export const testAppModel = new AppModel({
     blocks: [
       [{...eye1Block,x:200,y:200}, eye2Block, noseBlock, mouthBlock],
       { ...ifBlock,x:50,y:300},
-      { ...whileBlock,x:400,y:300},
+      { ...whileBlock,x:250,y:40},
       { x: 0, y: 0, 
         title: "open file",
         fields: [

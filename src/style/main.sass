@@ -70,38 +70,45 @@ body.noSelect
   pointer-events: none
   width: var(--blockMaxWidth)
 
-  .header 
-    position: absolute
-    max-width: var(--blockHeaderMaxWidth)
-    width: var(--blockHeaderMaxWidth)
-    top: var(--blockContentMarginY);
-    left: calc(var(--blockLeftTabWidth) + var(--blockContentMarginX))
-    font-family: "Barlow"
-    font-size: var(--blockFontSize)
-    line-height: var(--blockFontSize)
-    color: var(--blockFontColor)
+.fieldSet 
+  position: absolute
+  max-width: var(--blockHeaderMaxWidth)
+  width: var(--blockHeaderMaxWidth)
+  color: var(--blockFontColor)
 
-    .blockTitle
-      font-weight: 600
-      position: absolute
+.blockTitle, .blockFinalLabel
+  position: absolute
+  font-family: "Barlow Semi Condensed"
+  color: var(--blockLabelColor)
+  line-height: var(--blockFontSize)
+  white-space: nowrap
 
-.blockBackgroundLight 
-  fill: var(--blockBackground_light)
-  pointer-events: auto
+.blockTitle
+  font-weight: 600 // semi-bold
+  font-size: var(--blockFontSize)
 
-.blockBackgroundDarker
+
+.blockFinalLabel
+  font-weight: 400 // semi-bold
+  font-size: var(--blockFinalArmFontSize)
+
+.isGhost
+  opacity: 0.3
+
+.blockBackground
   // stroke: var(--blockBackground_light)
   fill: var(--blockBackground)
   pointer-events: auto
-  
+
+.blockStackBackground  
+  fill: var(--blockBackground_light)
+  pointer-events: auto
+
 .blockBackgroundShadow
   fill: var(--blockBackground_light)
-
-.block.ghost
-  opacity: 0.3
   
 .dragShadow 
-  filter: drop-shadow(0px 4px 8px #00000050);
+  filter: drop-shadow(0px 4px 8px rgba(0,0,0,0.3));
 /**  Field  **/
 
 .field
@@ -111,7 +118,7 @@ body.noSelect
   color: var(--fieldLabelColor)
   // next line is needed to prevent the descenders of letters in child-elements from being cut off.
   line-height: calc(var(--blockLineHeight) + 3px)
-
+  width: var(--blockHeaderMaxWidth)
 
   .label
     display: inline-block

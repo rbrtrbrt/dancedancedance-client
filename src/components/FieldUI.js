@@ -45,13 +45,14 @@ class BasicFieldUI extends React.Component {
 export class FieldUI  extends React.Component {
 
   render() {
-    const field = this.props.fieldInfo
+    const { fieldInfo:field, dx=0, dy=0, extraClasses } = this.props
     const style = {
-      left: field.location.x,
-      top: field.location.y
+      left: field.x + dx,
+      top: field.y +dy
     }
+    const classStr = classnames("field",extraClasses)
     return (
-      <div className="field" style={style}>
+      <div style={style} className={classStr}>
         <BasicFieldUI fieldInfo={this.props.fieldInfo}/>
       </div>
     )

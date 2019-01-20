@@ -50,15 +50,11 @@ export class DocumentModel extends CanvasModel {
       const idx = this.stacks.indexOf(stack);
       mxu.moveItem(this.stacks, idx, this.stacks.length-1)
   }
-  getStackX(stack) {
-    return this.stackLocations.get(stack).x
-  }
-  getStackY(stack) {
-    return this.stackLocations.get(stack).y
+  getStackPosition(stack) {
+    return this.stackLocations.get(stack);
   }
   @action 
   moveStackTo(stack,location) { 
-    ll(1,()=>location)  
     this.stackLocations.set(stack,location)
   }
   isDropTarget(point) {
@@ -80,17 +76,17 @@ export class DocumentModel extends CanvasModel {
   @action 
   insertDroppedBlocks(droppedBlocks,position) {
     const parentStack = droppedBlocks[0].parent
-    if(droppedBlocks[0].indexInStack === 0) {
-      // an existing stack was moved entirely
+    if(droppedBlocks[0].indexInStack == 0 
+       && parentStack.isCanvasChild) {
+      // an existing top-level stack was moved entirely
       parentStack.moveTo(position,true)
       return
-    } else {
-      const newStack = new BlockStackModel({blocks:[],...position},this)
-      for(const b of droppedBlocks) {
-        b.parent.removeBlock(b);
-        b.parent = newStack;
-        newStack.addBlock(b);
-      }
+    }
+    const newStack = new BlockStackModel({blocks:[],...position},this)
+    for(const b of droppedBlocks) {
+      b.parent.removeBlock(b);
+      b.parent = newStack;
+      newStack.addBlock(b);
     }
   }
 }

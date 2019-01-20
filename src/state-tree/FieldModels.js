@@ -33,37 +33,38 @@ export class FieldModel {
       parent.addField(this);
     }
   }
-
-  @computed get
-  label() { return this.fieldName ? this.fieldName+":" : "" }
-
-  @computed get 
-  width() {
+  @computed 
+  get label() { 
+    return this.fieldName ? this.fieldName+":" : "" 
+  }
+  @computed 
+  get width() {
     return this._measurements.labelWidth + this._measurements.valueWidth;
   }
-
-  @computed get
-  maxValueWidth() { 
+  @computed 
+  get maxValueWidth() { 
     return theme.blockHeaderMaxWidth - this._measurements.labelWidth;
   }
-
-  @computed get
-  height() { return 16; }
-
+  @computed 
+  get height() { 
+    return theme.blockFontSize; 
+  }
   @computed
-  get location() {
-    return this.parent.fieldPosition(this);
+  get x() {
+    return this.parent.fieldPosition(this).x;
+  }
+  @computed
+  get y() {
+    return this.parent.fieldPosition(this).y;
   }
   @action.bound
   handleValueChange(value) {
     this.value = value;
   }
-
   @action.bound
   updateValueWidth(width) {
     this._measurements.valueWidth = width;
   }
-
   @action.bound
   updateLabelWidth(width) {
     this._measurements.labelWidth = width;

@@ -30,18 +30,75 @@ export const BlockSVGFilters = () => {
     </svg>
   )
 }
-class BlockBackground extends React.PureComponent {
+@observer
+class BlockBackground extends React.Component {
   displayName = "BlockBackground";
+  
+  simpleBackground(block) {
+    return <rect className="blockBackground" x="0" y="0" 
+                 width={block.width} height={block.height} 
+                 rx={theme.blockCornerRadius} 
+                 onPointerDown={block.startDrag} />
+  }
+
+  complexPath(block,stroke=false) {
+    let strokeOffset = stroke ? theme.blockMargin/2 : 0; // strokeOffset
+    let cornerRadius = theme.blockCornerRadius;
+    
+    // top-right of fieldset
+    let corner1 = `a ${cornerRadius+strokeOffset},${cornerRadius+strokeOffset} 0 0 1  ${cornerRadius+strokeOffset}, ${cornerRadius+strokeOffset}\n`
+    // bottom-right of fieldset
+    let corner2 = `a ${cornerRadius+strokeOffset},${cornerRadius+strokeOffset} 0 0 1 -${cornerRadius+strokeOffset}, ${cornerRadius+strokeOffset}\n`
+    // top-left of stack
+    let corner3 = `a ${cornerRadius-strokeOffset},${cornerRadius-strokeOffset} 0 0 0 -${cornerRadius-strokeOffset}, ${cornerRadius-strokeOffset}\n`
+    // bottom-left of stack
+    let corner4 = `a ${cornerRadius-strokeOffset},${cornerRadius-strokeOffset} 0 0 0  ${cornerRadius-strokeOffset}, ${cornerRadius-strokeOffset}\n`
+    // bottom-left of final arm
+    let corner5 = `a ${cornerRadius+strokeOffset},${cornerRadius+strokeOffset} 0 0 1 -${cornerRadius+strokeOffset},-${cornerRadius+strokeOffset}\n`
+    // top-left of fieldset
+    let corner6 = `a ${cornerRadius+strokeOffset},${cornerRadius+strokeOffset} 0 0 1  ${cornerRadius+strokeOffset},-${cornerRadius+strokeOffset}\n`
+    
+    //const {width,height,fieldPositions, stackPositions} = block.segmentsLayout
+    
+    let path = `M ${theme.blockVerticalArmWidth+cornerRadius},-${strokeOffset}\n`
+
+    block.segments.forEach( ({fieldSet,stack})=> {
+      const fieldsHeight = fieldSet.height + 2 * theme.blockContentPaddingY;
+      const stackHeight = stack.height + 2*theme.blockMargin;
+      const fieldsWidth = fieldSet.width + theme.blockContentPaddingLeft + theme.blockContentPaddingRight;
+      // path segments
+      const fieldsTop = `h ${ fieldsWidth -theme.blockVerticalArmWidth- 2*cornerRadius}\n` + corner1
+      const fieldsRight = `v ${fieldsHeight - 2*cornerRadius}\n` + corner2
+      const fieldsBottom = `h ${-(fieldsWidth-theme.blockVerticalArmWidth-2*cornerRadius)}\n` + corner3
+      const stackLeft = `v ${stackHeight - 2*cornerRadius}\n` + corner4
+      path += fieldsTop + fieldsRight + fieldsBottom + stackLeft
+    })
+    path += `H ${block.finalArmWidth - cornerRadius}\n` + corner1
+    path += `v ${theme.blockFinalArmHeight - 2* cornerRadius}\n` + corner2
+    path += `H ${cornerRadius}\n` + corner5
+    path += `V ${cornerRadius}\n` + corner6 + "Z"
+    return path;         
+  }
+
+  complexBackground(block) {
+    return <path className="blockBackground" d={this.complexPath(block)} onPointerDown={block.startDrag}/>
+  }
+
   render() {
-    const { width, height, hover, onStartDrag} = this.props;
-    // need to extend the size to prevent clipping of dropshadow
-    const filterId = hover ? "filter-blockshadow-drag" : "filter-blockshadow"
-    return <svg width={width} height={height}  
-                viewBox={`0 0 ${width} ${height}`} 
-                style={{ position: "absolute", top: 0, left: 0,overflow: "visible" }} 
+    const {blockInfo:block, dx=0, dy=0} = this.props;
+    let shape;
+    if(block.segments.length == 1 && block.segments[0].stack == undefined) {
+      shape = this.simpleBackground(block)
+    } else {
+      shape = this.complexBackground(block)
+    }
+    //todo: need to extend the size to prevent clipping of dropshadow
+    const filterId = block.isDragging ? "filter-blockshadow-drag" : "filter-blockshadow"
+    return <svg width={block.width} height={block.height}  
+                viewBox={`0 0 ${block.width} ${block.height}`} 
+                style={{ position: "absolute", top: block.y+dy, left: block.x+dx,overflow: "visible" }} 
                 fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect className="blockBackgroundDarker" x="0" y="0" width={width} height={height} rx="5" onPointerDown={onStartDrag} />
-        {/* <rect className="blockBackgroundDarker" x={theme.blockLeftTabWidth+0.5} y="0.5" width={width - theme.blockLeftTabWidth-1} height={height - 1} rx="5" /> */}
+        {shape}
       </svg>;
     }
 };
@@ -49,14 +106,14 @@ class BlockBackground extends React.PureComponent {
 class BlockStackBackground extends React.PureComponent {
   displayName = "BlockstackBackground";
   render() {
-    const { x,y, width, height, hover, onStartDrag} = this.props;
+    const { x,y, width, height, isDragging, onStartDrag} = this.props;
     // need to extend the size to prevent clipping of dropshadow
-    const filterId = hover ? "filter-blockshadow-drag" : "filter-blockshadow"
+    const filterId = isDragging ? "filter-blockshadow-drag" : "filter-blockshadow"
     return <svg width={width} height={height}  
                 viewBox={`0 0 ${width} ${height}`} 
                 style={{ position: "absolute", left: x, top: y, overflow: "visible" }} 
                 fill="none" xmlns="http://www.w3.org/2000/svg">
-       <rect className="blockBackgroundShadow" x="0" y="0" width={width} height={height} rx="5" onPointerDown={onStartDrag} style={{ filter: "url(#"+filterId+")" }}/>
+       <rect className="blockStackBackground" x="0" y="0" width={width} height={height} rx="5" onPointerDown={onStartDrag} style={{ filter: "url(#"+filterId+")" }}/>
     </svg>;
     }
 };
@@ -66,27 +123,33 @@ class BlockStackBackground extends React.PureComponent {
 
 const BlockTitle = Measuring(class BlockTitle extends React.PureComponent {
   render() {    
-    return <div className="blockTitle">{this.props.text}</div>
+    const {x,y,text, extraClasses} = this.props;
+    const classStr = classnames("blockTitle", extraClasses);
+    return <div className={classStr} style={{top: y, left:x}}>{text}</div>
   }
 })
 
+const BlockFinalLabel = Measuring(class BlockFinalLabel extends React.PureComponent {
+  render() {    
+    const {x,y,text, extraClasses} = this.props;
+    const classStr = classnames("blockFinalLabel",extraClasses);
+    return <div className={classStr} style={{top: y, left:x}}>{text}</div>
+  }
+})
+
+
 @observer
-class BlockHeader extends React.Component {
-  displayName = "BlockHeader";
+class FieldSetUI extends React.Component {
+  displayName = "FieldSetUI";
   render() {
-    const { blockInfo:bi } = this.props;
-    const fields = bi.fields.map( (field,idx) => {
-        return <Fragment key={idx}>
-          <FieldUI fieldInfo={field} key={field.debugName} />
-        </Fragment>
+    const { fieldSet, dx=0, dy=0, extraClasses } = this.props;
+    const fields = fieldSet.fields.map( (field,idx) => {
+        return <FieldUI fieldInfo={field} key={field.debugName} dx={dx} dy={dy} extraClasses={extraClasses}/>
     })
-    // The wierd double-span construct is needed to have the trailing space be subject
-    // to .header's word-spacing for separating fields (word-spacing is disabled inside .blockTitle)
-    // return <div className="header" ref={this.headerRef}>
-    return <div className="header">
-      <BlockTitle text={bi.blockTitle} onMeasure={({width})=>bi.updateTitleWidth(width)}/>
+    return <Fragment>
+      <BlockTitle text={fieldSet.title} x={fieldSet.x+dx} y={fieldSet.y+dy}  onMeasure={({width})=>fieldSet.updateTitleWidth(width)} extraClasses={extraClasses}/>
       { fields }
-    </div>
+    </Fragment>
   }
 }
 
@@ -97,30 +160,52 @@ class BlockHeader extends React.Component {
 class BasicBlockUI extends React.Component {
   displayName = "BasicBlockUI";
   render() {
-    let { blockInfo:block, isDragItem, dx=0, dy=0, jump } = this.props;
-    const xx = block.x + dx;
-    const yy = block.y + dy;
-    let style;
-    if(block.isDragging) {
-      style = { transform: "translate(" + xx + "px," + yy + "px)" }
-    } else {
-      style = { left: xx, top: yy }
-    }
+    let { blockInfo:block, isDragItem, dx=0, dy=0, jump, extraClasses } = this.props;
+    // const xx = block.x + dx;
+    // const yy = block.y + dy;
+    // let style;
+    // if(block.isDragging) {
+    //   style = { transform: "translate(" + xx + "px," + yy + "px)" }
+    // } else {
+    //   style = { left: xx, top: yy }
+    // }
     const isGhost = block.isDragging && !isDragItem;
-    const classes = classnames("block", {ghost:isGhost});
-    let substack;
-    if( block.substack ) {
-      substack = <BlockStackUI key="substack" stackInfo={block.substack} dx={dx} dy={dy} isDragItem={isDragItem} jump={jump}/>
+    extraClasses = {  ...extraClasses, isGhost }
+    if(block.isDragging) {
+      ll("render basic blockui", block.blockTitle, ()=>block.isDragging,()=>isDragItem, ()=>isGhost,()=>extraClasses)
     }
+    const segmentsJSX = [];
+    for(const segm of block.segments) {
+      segmentsJSX.push( <FieldSetUI key={segm.fieldSet.id} extraClasses={extraClasses} fieldSet={segm.fieldSet} dx={dx} dy={dy}/> );
+      if(segm.stack) {
+        segmentsJSX.push( 
+          <BlockStackUI key={segm.stack.id} extraClasses={extraClasses} stackInfo={segm.stack} dx={dx} dy={dy} isDragItem={isDragItem} jump={jump}/>
+        );
+      }
+    }
+    const needsFinalLabel = block.segments[block.segments.length-1].stack != undefined
+    let finalLabel;
+    if(needsFinalLabel) {
+      finalLabel = <Spring key={"final_"+block.id} 
+          immediate={jump}
+          from={{ xx: block.finalLabelPosition.x+dx, yy: block.finalLabelPosition.y+dy }} 
+          to={{ xx: block.finalLabelPosition.x+dx, yy: block.finalLabelPosition.y+dy }} >
+          {anim => <BlockFinalLabel text={block.finalArmLabel} 
+                                x={anim.xx} 
+                                y={anim.yy} 
+                                extraClasses={extraClasses} 
+                                onMeasure={({width})=>block.updateFinalArmWidth(width)} 
+               />  
+      }
+    </Spring>
+
+    } 
     return [
-      <div className={classes} style={style} onMouseUp={block.bringToTop} key="block">
-        <BlockBackground width={block.width} height={block.height} 
-                         hover={block.isDragging} 
-                         onStartDrag={block.startDrag} />
-        <BlockHeader blockInfo={block}/>
-      </div>
-      ,
-      substack
+      // <div className={classes} style={style} onMouseUp={block.bringToTop} >
+        <BlockBackground blockInfo={block} key={block.id} dx={dx} dy={dy}/>,
+      // </div>,
+      ...segmentsJSX,
+      finalLabel
     ];
   }
 };
@@ -129,6 +214,7 @@ class BasicBlockUI extends React.Component {
 // dragged block.
 @observer
 export class DraggingBlocks extends React.Component {
+  
   displayName="DraggingBlocks";
   renderDragBlocks(dx,dy) {
     const {dragBlocks} = this.props
@@ -142,13 +228,11 @@ export class DraggingBlocks extends React.Component {
     return <div className="dragShadow">{result}</div>;
   }
   render() {
-    const { dragBlocks:bs } = this.props;
     const origin = uiTracker.drag.firstDragPanel.canvasToClient(0,0);   
-    const dx = uiTracker.dragDeltaX + origin.x
+    const dx = uiTracker.dragDeltaX + origin.x // adding origin to convert from canvas coords to client coords.
     const dy = uiTracker.dragDeltaY + origin.y
     const dragCorrectionX = uiTracker.drag.correctionX;
     const dragCorrectionY = uiTracker.drag.correctionY;
-    const blocks = new Array(bs.length);
     let result;
     switch(uiTracker.drag.phase) {
       case "beforeDrag":
@@ -192,7 +276,9 @@ export class DraggingBlocks extends React.Component {
 export class BlockStackUI extends React.Component {
   displayName = "BlockStack";
   render() {
-    const { stackInfo:stack, isDragItem, dx=0, dy=0 } = this.props;
+    const { stackInfo:stack, isDragItem, dx=0, dy=0, extraClasses } = this.props;
+    if(stack.blocks[0]) {
+    }
     const jump = stack.jump || this.props.jump;
     const xx = stack.x + dx;
     const yy = stack.y + dy;
@@ -206,6 +292,7 @@ export class BlockStackUI extends React.Component {
           from={{ xx: xx, yy: yy, ww: stack.width, hh: stack.height }} 
           to={{ xx: xx, yy: yy, ww: stack.width, hh: stack.height }} >
             {anim => <BlockStackBackground
+              extraClasses={extraClasses}
               x={anim.xx} y={anim.yy}
               width={anim.ww} height={anim.hh} />
             }
@@ -213,13 +300,12 @@ export class BlockStackUI extends React.Component {
     }
     stack.blocks.forEach( (block,idx) => {
       const blockKey = block.debugName
-      ll("render block in stack", blockKey, ()=>jump);
       allItems[idx+needsBackground] = 
         <Spring key={blockKey+idx} 
           immediate={jump}
           from={{ xx: block.x, yy: block.y }} 
           to={{ xx: block.x, yy: block.y }} >
-          {anim => <BasicBlockUI blockInfo={block} dx={anim.xx-block.x+dx} dy={anim.yy-block.y+dy} isDragItem={isDragItem} jump={jump}/>}
+          {anim => <BasicBlockUI blockInfo={block} dx={anim.xx-block.x+dx} dy={anim.yy-block.y+dy} isDragItem={isDragItem} extraClasses={extraClasses} jump={jump}/>}
         </Spring>
     })
     return allItems;
