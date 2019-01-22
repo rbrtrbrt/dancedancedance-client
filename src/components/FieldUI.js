@@ -47,8 +47,8 @@ export class FieldUI  extends React.Component {
   render() {
     const { fieldInfo:field, dx=0, dy=0, extraClasses } = this.props
     const style = {
-      left: field.x + dx,
-      top: field.y +dy
+      left: field.canvasX + dx,
+      top: field.canvasY +dy
     }
     const classStr = classnames("field",extraClasses)
     return (

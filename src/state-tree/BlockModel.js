@@ -73,9 +73,7 @@ export class BlockStackModel {
     this.parent.bringStackToTop(this)
   }
   getBlockPosition(block) {
-    const {blockPositions} = this.blocksLayout;
-    const {x,y} = blockPositions.get(block);
-    return {x: x+this.x, y: y+this.y};
+    return this.blocksLayout.blockPositions.get(block);
   }
   blockIndex(block) {
     return this.blocks.indexOf(block);
@@ -89,12 +87,20 @@ export class BlockStackModel {
     }
   }
   //@computed 
-  get x() {
+  get childX() {
     return this.parent.getStackPosition(this).x;
   }
   //@computed 
-  get y() {
+  get childY() {
     return this.parent.getStackPosition(this).y;
+  }  
+  @computed 
+  get canvasX() {
+    return this.childX + this.parent.canvasX;
+  }
+  @computed 
+  get canvasY() {
+    return this.childY + this.parent.canvasY;
   }  
   @computed 
   get width() {
@@ -141,13 +147,11 @@ export class BlockStackModel {
     return {width: maxWidth, height: currY, blockPositions};
   }
   isDropTarget({x,y}) {
-    if(this.parent.blockTitle) {
-    }
-    if(y<this.y) return false;
-    if(y>this.y+this.height) return false;
-    if( x < this.topBlockStack.x)             
+    if(y<this.canvasY) return false;
+    if(y>this.canvasY+this.height) return false;
+    if( x < this.topBlockStack.canvasX)             
       return false;
-    if( x > this.topBlockStack.x + this.topBlockStack.width) 
+    if( x > this.topBlockStack.canvasX + this.topBlockStack.width) 
       return false; 
     return true;
   }
@@ -160,7 +164,11 @@ export class BlockStackModel {
   }
   @action 
   visitBlockDropTargets(f,acc) {
-    acc = f(this,acc);
+    let descendToChildren;
+    [acc,descendToChildren] = f(this,acc);
+    if(descendToChildren===false) {
+      return acc;
+    }
     for(const b of this.blocks) {
       acc = b.visitBlockDropTargets(f,acc);
     }
@@ -245,12 +253,22 @@ class FieldSetModel {
     return result
   }
   @computed 
-  get x() {
+  get childX() {
     return this.parent.getFieldSetPosition(this).x;
   }
   @computed 
-  get y() {
+  get childY() {
     return this.parent.getFieldSetPosition(this).y;
+  }
+  @computed 
+  get canvasX() {
+    return this.childX + this.parent.canvasX;
+  }
+  @computed 
+  get canvasY() {
+    if(this.title == "while") {
+    }
+    return this.childY + this.parent.canvasY;
   }
   get width() {
     return this.fieldsLayout.width;
@@ -259,8 +277,7 @@ class FieldSetModel {
     return this.fieldsLayout.height;
   }
   fieldPosition(field) {
-    const {x,y} = this.fieldsLayout.fieldPositions.get(field);
-    return {x: x+this.x, y: y+this.y};
+    return this.fieldsLayout.fieldPositions.get(field);
   }
   @action.bound
   updateTitleWidth(width){
@@ -386,12 +403,10 @@ export class BlockModel {
     // pass; stack inside block doesn't overlap anything.
   }
   getStackPosition(stack) {  
-    const {x,y} = this.segmentsLayout.subStackPositions.get(stack);
-    return {x: x+this.x, y: y+this.y};
+    return this.segmentsLayout.subStackPositions.get(stack);
   }
   getFieldSetPosition(fieldSet) {  
-    const {x,y} = this.segmentsLayout.fieldSetPositions.get(fieldSet);
-    return {x: x+this.x, y: y+this.y};
+    return this.segmentsLayout.fieldSetPositions.get(fieldSet);
   }
   @computed 
   get width() {
@@ -403,13 +418,21 @@ export class BlockModel {
     const {height} = this.segmentsLayout;
     return height;
   }
-  @computed 
-  get x() {
+  // @computed 
+  get childX() {
     return this.parent.getBlockPosition(this).x;
   }
-  @computed 
-  get y() {
+  // @computed 
+  get childY() {
     return this.parent.getBlockPosition(this).y;
+  }
+  @computed
+  get canvasX() {
+    return this.childX + this.parent.canvasX;
+  }
+  @computed
+  get canvasY() {
+    return this.childY + this.parent.canvasY;
   }
   @computed 
   get indexInStack() {
@@ -456,20 +479,20 @@ export class BlockModel {
     uiTracker.startDrag(evt, dragBlocks);
   } 
   isDropTarget({x,y}) { 
-    //todo: memoize this? how?
+    ll("isTarget?", this.blockTitle)
     const margin = theme.blockMargin;
-    if( y < this.y - margin ) 
+    if( y < this.canvasY - margin ) 
       return false;
-    if( y > this.y + this.height + margin ) 
+    if( y > this.canvasY + this.height + margin ) 
       return false;
-    if( x < this.topBlockStack.x)             
+    if( x < this.topBlockStack.canvasX)             
       return false;
-    if( x > this.topBlockStack.x + this.topBlockStack.width) 
+    if( x > this.topBlockStack.canvasX + this.topBlockStack.width) 
       return false; 
     if( this.isDragging ) return false;
+    ll("---isTarget?", this.blockTitle, true)
     return true;
   }
-
   @action
   getDropLocation(draggedBlocks,dragCursorPos) {
     const {fieldSetPositions} = this.segmentsLayout;
@@ -477,10 +500,8 @@ export class BlockModel {
     const padding = theme.blockContentPaddingY;
     const dragY = dragCursorPos.y
     const segmentIdx = this.segments.findIndex((segm,idx)=>{
-      let {y} = fieldSetPositions.get(segm.fieldSet);
-      y += this.y;
-      if(this.blockTitle=="create table column") {
-      }
+      let y = segm.fieldSet.canvasY //fieldSetPositions.get(segm.fieldSet);
+      // y += this.canvasY;
       if(dragY < y - padding - margin ) return false;
       if(dragY > y + padding + segm.fieldSet.height + margin) return false;
       // no need to check x: this block contains cursor and we don't have blocks side-by-side.
@@ -488,14 +509,14 @@ export class BlockModel {
     })
     if( segmentIdx > -1 ) {
       const theSegm = this.segments[segmentIdx];
-      let {y:fieldsY} = fieldSetPositions.get(theSegm.fieldSet);
-      fieldsY += this.y
+      let fieldsY = theSegm.fieldSet.canvasY;
+      // fieldsY += this.y
       if( dragY < fieldsY + theSegm.fieldSet.height/2) {
         if(segmentIdx==0) {
           return [this.parent, this.indexInStack]
         } else {
           const prevStack = this.segments[segmentIdx-1].stack
-          return [prevStack,prevStack.length]
+          return [prevStack,prevStack.blocks.length]
         }
       } else {
         if(theSegm.stack == undefined) {
@@ -510,11 +531,18 @@ export class BlockModel {
         throw new Error(`Weird: in drop-target block, cursor not above a fieldset, and there is no final arm.`);
       }
       const finalArmHeight = theme.blockFinalArmHeight;
-      const finalTop = this.y + this.height - finalArmHeight - margin; 
-      if( dragY >= finalTop && dragY <= finalTop + finalArmHeight / 2 + margin) {
-        return [lastSegm.stack,lastSegm.stack.blocks.length]
-      } else if( dragY >= finalTop  + finalArmHeight / 2  + margin && dragY <= finalTop + finalArmHeight  + 2*margin)  {
+      const finalArmTop = this.canvasY + this.height - finalArmHeight - margin; 
+      // if( dragY >= finalArmTop && dragY <= finalArmTop + finalArmHeight / 2 + margin) {
+      //   return [lastSegm.stack,lastSegm.stack.blocks.length]
+      // } else if( dragY >= finalArmTop  + finalArmHeight / 2  + margin && dragY <= finalArmTop + finalArmHeight  + 2*margin)  {
+      //   const dropIndex = this.indexInStack + 1;
+      //   return [this.parent, dropIndex]
+      // } else {
+      //     throw new Error(`Weird: in Droptarget block, not on fieldset, not on final arm. "${this.blockTitle}"`)
+      // }
+      if( dragY >= finalArmTop && dragY <= finalArmTop + finalArmHeight  + 2*margin)  {
         const dropIndex = this.indexInStack + 1;
+        ll("###", ()=>this.debugName, ()=>this.parent.debugName)
         return [this.parent, dropIndex]
       } else {
           throw new Error(`Weird: in Droptarget block, not on fieldset, not on final arm. "${this.blockTitle}"`)
@@ -524,7 +552,11 @@ export class BlockModel {
   //todo: adjust for mult. segments
   @action 
   visitBlockDropTargets(f,acc) {
-    acc = f(this,acc)
+    let descendToChildren;
+    [acc,descendToChildren] = f(this,acc)
+    if(descendToChildren===false) {
+      return acc;
+    }
     for( const segm of this.segments ) {
       if( segm.stack ) {
         acc = segm.stack.visitBlockDropTargets(f,acc) 
@@ -539,9 +571,12 @@ export class BlockModel {
                       + theme.blockContentPaddingRight;
     return Math.max(realWidth, theme.blockFinalArmMinWidth);
   }
-  get finalLabelPosition() {
-    const {finalLabelPosition:{x,y}} = this.segmentsLayout;
-    return {x: this.x+x, y: this.y+y};
+  @computed
+  get finalLabelCanvasPosition() {
+    let {x,y} = this.segmentsLayout.finalLabelPosition
+    x += this.parent.canvasX;
+    y += this.parent.canvasY;
+    return {x,y};
   }
   @action.bound
   updateFinalArmWidth(width){

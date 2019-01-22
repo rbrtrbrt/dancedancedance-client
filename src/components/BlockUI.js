@@ -96,7 +96,7 @@ class BlockBackground extends React.Component {
     const filterId = block.isDragging ? "filter-blockshadow-drag" : "filter-blockshadow"
     return <svg width={block.width} height={block.height}  
                 viewBox={`0 0 ${block.width} ${block.height}`} 
-                style={{ position: "absolute", top: block.y+dy, left: block.x+dx,overflow: "visible" }} 
+                style={{ position: "absolute", top: block.canvasY+dy, left: block.canvasX+dx,overflow: "visible" }} 
                 fill="none" xmlns="http://www.w3.org/2000/svg">
         {shape}
       </svg>;
@@ -146,8 +146,10 @@ class FieldSetUI extends React.Component {
     const fields = fieldSet.fields.map( (field,idx) => {
         return <FieldUI fieldInfo={field} key={field.debugName} dx={dx} dy={dy} extraClasses={extraClasses}/>
     })
+    if(fieldSet.title == "Exit program") {
+    }
     return <Fragment>
-      <BlockTitle text={fieldSet.title} x={fieldSet.x+dx} y={fieldSet.y+dy}  onMeasure={({width})=>fieldSet.updateTitleWidth(width)} extraClasses={extraClasses}/>
+      <BlockTitle text={fieldSet.title} x={fieldSet.canvasX+dx} y={fieldSet.canvasY+dy}  onMeasure={({width})=>fieldSet.updateTitleWidth(width)} extraClasses={extraClasses}/>
       { fields }
     </Fragment>
   }
@@ -169,11 +171,9 @@ class BasicBlockUI extends React.Component {
     // } else {
     //   style = { left: xx, top: yy }
     // }
+
     const isGhost = block.isDragging && !isDragItem;
     extraClasses = {  ...extraClasses, isGhost }
-    if(block.isDragging) {
-      ll("render basic blockui", block.blockTitle, ()=>block.isDragging,()=>isDragItem, ()=>isGhost,()=>extraClasses)
-    }
     const segmentsJSX = [];
     for(const segm of block.segments) {
       segmentsJSX.push( <FieldSetUI key={segm.fieldSet.id} extraClasses={extraClasses} fieldSet={segm.fieldSet} dx={dx} dy={dy}/> );
@@ -188,8 +188,8 @@ class BasicBlockUI extends React.Component {
     if(needsFinalLabel) {
       finalLabel = <Spring key={"final_"+block.id} 
           immediate={jump}
-          from={{ xx: block.finalLabelPosition.x+dx, yy: block.finalLabelPosition.y+dy }} 
-          to={{ xx: block.finalLabelPosition.x+dx, yy: block.finalLabelPosition.y+dy }} >
+          from={{ xx: block.finalLabelCanvasPosition.x+dx, yy: block.finalLabelCanvasPosition.y+dy }} 
+          to={{ xx: block.finalLabelCanvasPosition.x+dx, yy: block.finalLabelCanvasPosition.y+dy }} >
           {anim => <BlockFinalLabel text={block.finalArmLabel} 
                                 x={anim.xx} 
                                 y={anim.yy} 
@@ -214,7 +214,7 @@ class BasicBlockUI extends React.Component {
 // dragged block.
 @observer
 export class DraggingBlocks extends React.Component {
-  
+
   displayName="DraggingBlocks";
   renderDragBlocks(dx,dy) {
     const {dragBlocks} = this.props
@@ -280,8 +280,8 @@ export class BlockStackUI extends React.Component {
     if(stack.blocks[0]) {
     }
     const jump = stack.jump || this.props.jump;
-    const xx = stack.x + dx;
-    const yy = stack.y + dy;
+    const xx = stack.canvasX + dx;
+    const yy = stack.canvasY + dy;
     const stackKey = stack.debugName;
     const needsBackground = stack.isCanvasChild ? 1 : 0;
     const allItems = new Array(stack.blocks.length + needsBackground);
@@ -303,9 +303,9 @@ export class BlockStackUI extends React.Component {
       allItems[idx+needsBackground] = 
         <Spring key={blockKey+idx} 
           immediate={jump}
-          from={{ xx: block.x, yy: block.y }} 
-          to={{ xx: block.x, yy: block.y }} >
-          {anim => <BasicBlockUI blockInfo={block} dx={anim.xx-block.x+dx} dy={anim.yy-block.y+dy} isDragItem={isDragItem} extraClasses={extraClasses} jump={jump}/>}
+          from={{ xx: block.canvasX, yy: block.canvasY }} 
+          to={{ xx: block.canvasX, yy: block.canvasY }} >
+          {anim => <BasicBlockUI blockInfo={block} dx={anim.xx-block.canvasX+dx} dy={anim.yy-block.canvasY+dy} isDragItem={isDragItem} extraClasses={extraClasses} jump={jump}/>}
         </Spring>
     })
     return allItems;
