@@ -32,12 +32,10 @@ export class DocumentModel extends CanvasModel {
   }
   @action 
   addStack(stack,location) {
+    checkDef(()=>location,`stacks can only be added to document with {x,y} location.`);
+    checkType(location.x,Number);
+    checkType(location.y,Number);
     this.stacks.push(stack);
-    if(!location) {
-      checkType(stack.xx,Number);
-      checkType(stack.yy,Number);
-      location = {x:stack.xx,y:stack.yy};
-    }
     this.stackLocations.set(stack,location)
   }
   @action 
@@ -53,6 +51,9 @@ export class DocumentModel extends CanvasModel {
   getStackPosition(stack) {
     return this.stackLocations.get(stack);
   }
+  // these properties needed for canvasX in blockStacks
+  get canvasX() { return 0 };
+  get canvasY() { return 0 };
   @action 
   moveStackTo(stack,location) { 
     this.stackLocations.set(stack,location)
@@ -62,7 +63,7 @@ export class DocumentModel extends CanvasModel {
   }
   @action
   visitBlockDropTargets(f,acc) {
-    acc = f(this,acc)
+    [acc] = f(this,acc)
     for(const s of this.stacks) {
       acc = s.visitBlockDropTargets(f,acc);
     } 

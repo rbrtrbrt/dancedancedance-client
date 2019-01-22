@@ -49,13 +49,21 @@ export class FieldModel {
   get height() { 
     return theme.blockFontSize; 
   }
-  @computed
-  get x() {
+  // @computed
+  get childX() {
     return this.parent.fieldPosition(this).x;
   }
-  @computed
-  get y() {
+  // @computed
+  get childY() {
     return this.parent.fieldPosition(this).y;
+  }
+  @computed
+  get canvasX() {
+    return this.childX + this.parent.canvasX;
+  }
+  @computed
+  get canvasY() {
+    return this.childY + this.parent.canvasY;
   }
   @action.bound
   handleValueChange(value) {

@@ -68,6 +68,14 @@ class UITracker {
     if (evt.isPrimary) {
       this.mouseX = Math.round(evt.x);
       this.mouseY = Math.round(evt.y);
+      // const hoverBlock = this.drag.lastDragPanel.document.visitBlockDropTargets( 
+      //   (target,prevTopTarget) => {
+      //     if( target.isDropTarget(this.canvasDragLocation) ) {
+      //       return [target,true];
+      //     } else {
+      //       return [prevTopTarget,false];
+      //     }
+      //   }, null)
       if(this.drag) {
         this.dragMove(evt);
       }
@@ -79,18 +87,18 @@ class UITracker {
     const topmostDropTarget = this.drag.lastDragPanel.document.visitBlockDropTargets( 
       (target,prevTopTarget) => {
         if( target.isDropTarget(this.canvasDragLocation) ) {
-          return target;
+          return [target,true];
         } else {
-          return prevTopTarget;
+          return [prevTopTarget,false];
         }
       }, null)
     const dragResult = topmostDropTarget.getDropLocation(this.drag.items, this.canvasDragLocation )
     if(dragResult) {
-      // ll("droploc:", dragResult[0], dragResult[1])
+      ll("droploc:", dragResult[0].debugName, dragResult[1])
       this.drag.dropContainer = dragResult[0]
       this.drag.dropPosition = dragResult[1]
     } else {
-      // ll("droploc:", dragResult)
+      ll("NOT A droploc:", dragResult)
     }
   }
   @action
@@ -114,8 +122,8 @@ class UITracker {
     }
     // These two lines can't be part of object literal above because
     // 'get canvasDragLocation()' expects this.drag.lastDragPanel to exist.
-    this.drag.correctionX = this.canvasDragLocation.x - blocks[0].x;
-    this.drag.correctionY = this.canvasDragLocation.y - blocks[0].y;
+    this.drag.correctionX = this.canvasDragLocation.x - blocks[0].canvasX;
+    this.drag.correctionY = this.canvasDragLocation.y - blocks[0].canvasY;
     document.body.classList.add("noSelect");
     document.body.addEventListener('pointerup', this.endDrag);
     document.body.setPointerCapture(this.drag.pointerId);
@@ -129,10 +137,6 @@ class UITracker {
     if(this.drag.phase !== "beforeDrag") {
       this.mouseX = Math.round(evt.clientX);
       this.mouseY = Math.round(evt.clientY);
-      // const newLocation = {
-      //   x: this.canvasDragLocation.x + this.drag.correctionX, 
-      //   y: this.canvasDragLocation.y + this.drag.correctionY
-      // } 
       this.drag.dropContainer.insertDroppedBlocks(this.drag.items, this.drag.dropPosition);   
     }
     this._whenDisposer();
