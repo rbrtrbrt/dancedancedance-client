@@ -24,8 +24,12 @@ const blockFieldLineIndent__px     = 6;
 const blockFinalArmHeight__px      = 12;
 const blockFinalArmMinWidth__px    = 50;
 const blockFinalArmFontSize__px    = 10;
-const blockBackground              = neutral(0.1).hex();
-const blockBackground_light        = neutral(0.05).hex();
+const blockBackground              = neutral(0.08).hex();
+const blockBackground_even         = neutral(0.1).hex();
+const blockBackground_odd          = neutral(0.13).hex();
+const stackBackground              = neutral(0.05).hex();
+const stackBackground_highlight    = neutral(0.035).hex();
+const topStackPadding__px          = 2;
 const blockLabelColor              = neutral(0.6).hex();
 const blockInputColor              = neutral(1).hex();
 const blockSingleLineHeight__px    = blockFontSize__px + blockContentPaddingY__px * 2;
@@ -58,7 +62,11 @@ const allStyleParams =  {
   blockFinalArmMinWidth__px,
   blockFinalArmFontSize__px,
   blockBackground, 
-  blockBackground_light, 
+  blockBackground_even,
+  blockBackground_odd,
+  topStackPadding__px,
+  stackBackground,
+  stackBackground_highlight, 
   blockFontSize__px,
   blockLineSpace__px,
   blockLineHeight__px,

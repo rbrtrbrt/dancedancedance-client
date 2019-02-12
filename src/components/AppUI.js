@@ -39,6 +39,8 @@ export class AppUI extends React.Component {
         {(y)=>uiTracker.mouseY}
         {(cx)=>uiTracker.canvasMouseLocation.x}
         {(cy)=>uiTracker.canvasMouseLocation.y}
+        {(hs)=>uiTracker.hoverStack && uiTracker.hoverStack.debugName}
+        {(hb)=>uiTracker.hoverBlock && uiTracker.hoverBlock.debugName}
       </MobxStatus>
     ];
     if(uiTracker.drag) {
