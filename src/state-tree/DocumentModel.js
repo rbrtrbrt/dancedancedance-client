@@ -61,16 +61,23 @@ export class DocumentModel extends CanvasModel {
   isDropTarget(point) {
     return true // Document is ATS-root. Always covers complete editor area.
   }
-  @action
-  visitBlockDropTargets(f,acc) {
-    [acc] = f(this,acc)
-    for(const s of this.stacks) {
-      acc = s.visitBlockDropTargets(f,acc);
-    } 
-    return acc;
+  containsPoint(point) {
+    return true // Document is infinite.
   }
+  * allBlockDropTargets() {
+    yield this;
+    for(const s of this.stacks) {
+      yield * s.allBlockDropTargets();
+    } 
+  }
+  * allHoverResponders() {
+    for(const s of this.stacks) {
+      yield * s.allHoverResponders();
+    } 
+  }
+
   @action
-  getDropLocation(_,dragCursorPos) {
+  getDropLocation(dragCursorPos) {
     return [this,dragCursorPos]
   }
 

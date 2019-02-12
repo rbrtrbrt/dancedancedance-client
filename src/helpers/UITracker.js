@@ -2,7 +2,8 @@ import * as mx from "mobx";
 const {observable, computed, action} = mx;
 import { ll, gg, ge, checkDef } from '../helpers/debug/ll';
 import {vectorLength} from '../helpers/measure';
-import {BlockModel} from '../state-tree/BlockModel.js'
+import {BlockModel,BlockStackModel} from '../state-tree/BlockModel.js'
+import {DocumentModel} from '../state-tree/DocumentModel.js'
 
 export
 class UITracker {
@@ -25,7 +26,7 @@ class UITracker {
   mouseY = 0;
 
   @observable
-  drag = null 
+  drag = null; 
   // this is the interface for 'drag':
   //   startX: number,
   //   startY: number,
@@ -36,6 +37,9 @@ class UITracker {
   //   correctionY: number
   //   dropContainer: Object,
   //   dropPosition: Number or {x:Number,y:Number} (or String?)
+
+  @observable hoverStack = null;
+  @observable hoverBlock = null;
 
   @computed 
   get dndPanels() {
@@ -68,14 +72,24 @@ class UITracker {
     if (evt.isPrimary) {
       this.mouseX = Math.round(evt.x);
       this.mouseY = Math.round(evt.y);
-      // const hoverBlock = this.drag.lastDragPanel.document.visitBlockDropTargets( 
-      //   (target,prevTopTarget) => {
-      //     if( target.isDropTarget(this.canvasDragLocation) ) {
-      //       return [target,true];
-      //     } else {
-      //       return [prevTopTarget,false];
-      //     }
-      //   }, null)
+      if(this.dndPanelWithMouse) {
+        const hoverResponders = this.dndPanelWithMouse.document.allHoverResponders();
+        let hoverStack, hoverBlock;
+        // Look for the _first_ stack, and the _last_ block
+        for( const hr of hoverResponders) {
+          if( ! hoverStack && hr instanceof BlockStackModel ) {
+            hoverStack = hr;
+          }
+          if( hr instanceof BlockModel ) {
+            hoverBlock = hr;
+          }
+        }
+        this.hoverStack = hoverStack;
+        this.hoverBlock = hoverBlock; 
+      } else {
+        this.hoverStack = null;
+        this.hoverBlock = null; 
+      }
       if(this.drag) {
         this.dragMove(evt);
       }
@@ -84,21 +98,23 @@ class UITracker {
   @action
   dragMove(evt) {
     this.drag.lastDragPanel = this.dndPanelWithMouse || this.drag.lastDragPanel;
-    const topmostDropTarget = this.drag.lastDragPanel.document.visitBlockDropTargets( 
-      (target,prevTopTarget) => {
-        if( target.isDropTarget(this.canvasDragLocation) ) {
-          return [target,true];
-        } else {
-          return [prevTopTarget,false];
-        }
-      }, null)
-    const dragResult = topmostDropTarget.getDropLocation(this.drag.items, this.canvasDragLocation )
-    if(dragResult) {
-      ll("droploc:", dragResult[0].debugName, dragResult[1])
-      this.drag.dropContainer = dragResult[0]
-      this.drag.dropPosition = dragResult[1]
+    const dropTargets = this.drag.lastDragPanel.document.allBlockDropTargets();
+    let topmostDropTarget;
+    for(const dt of dropTargets) {  // take very last dropTarget from iterator
+      topmostDropTarget = dt;
+    }
+    if(topmostDropTarget) {
+      const dragResult = topmostDropTarget.getDropLocation(this.canvasDragLocation )
+      if(dragResult) {
+        this.drag.dropContainer = dragResult[0];
+        this.drag.dropPosition = dragResult[1];
+      } else {
+        ll("NOT A droploc:", dragResult)
+      }
     } else {
-      ll("NOT A droploc:", dragResult)
+      ll("NO droploc!")
+      this.drag.dropContainer = null;
+      this.drag.dropPosition = null;
     }
   }
   @action

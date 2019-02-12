@@ -80,7 +80,7 @@ export class BlockStackModel {
   }
   @computed 
   get stackDepth() {
-    if(this.parent.blockDepth) {
+    if(this.parent.blockDepth != undefined) {
       return this.parent.blockDepth + 1
     } else {
       return 0;
@@ -128,7 +128,8 @@ export class BlockStackModel {
   @computed 
   get blocksLayout() {
     const blockPositions = new Map();
-    let currY = 0;
+    const padding = this.isCanvasChild ? theme.topStackPadding : 0;
+    let currY = padding;
     let maxWidth = 0;
     this.blocks.forEach( (block,idx)=>{
       if(idx > 0) {
@@ -137,42 +138,59 @@ export class BlockStackModel {
       if(this.hasDropGap && uiTracker.drag.dropPosition === idx) {
         currY += theme.blockSingleLineHeight;
       }
-      blockPositions.set(block, {x:0, y:currY});
+      blockPositions.set(block, {x:padding, y:currY});
       currY += block.height;
       maxWidth = Math.max(maxWidth, block.width);
     })
     if(this.hasDropGap && uiTracker.drag.dropPosition === this.blocks.length) {
       currY += theme.blockSingleLineHeight;
     }
-    return {width: maxWidth, height: currY, blockPositions};
+    currY += padding
+    return {width: maxWidth+2*padding, height: currY, blockPositions};
   }
-  isDropTarget({x,y}) {
-    if(y<this.canvasY) return false;
-    if(y>this.canvasY+this.height) return false;
+  get isDropTarget() {
+    const {x,y} = uiTracker.canvasDragLocation;
+    if(y < this.canvasY) return false;
+    if(y > this.canvasY+this.height) return false;
     if( x < this.topBlockStack.canvasX)             
       return false;
     if( x > this.topBlockStack.canvasX + this.topBlockStack.width) 
       return false; 
     return true;
   }
-  getDropLocation(_,dragCursorPos) {
+  containsPoint({x,y}) {
+    if(y < this.canvasY) return false;
+    if(y > this.canvasY+this.height) return false;
+    if( x < this.canvasX)             
+      return false;
+    if( x > this.canvasX + this.width) 
+      return false; 
+    return true;
+  }
+  getDropLocation(_) {
     if(this.blocks.length==0) {
       return [this,0]  // over an empty C-block
     } else { // over dropGap
       return [this,uiTracker.drag.dropPosition]
     }
   }
-  @action 
-  visitBlockDropTargets(f,acc) {
-    let descendToChildren;
-    [acc,descendToChildren] = f(this,acc);
-    if(descendToChildren===false) {
-      return acc;
+  * allBlockDropTargets() {
+    if( ! this.isDropTarget ) {
+      return;
     }
+    yield this;
     for(const b of this.blocks) {
-      acc = b.visitBlockDropTargets(f,acc);
+      yield * b.allBlockDropTargets();
     }
-    return acc;
+  }
+  * allHoverResponders() {
+    if( ! this.containsPoint(uiTracker.canvasMouseLocation) ) {
+      return;
+    }
+    yield this;
+    for(const b of this.blocks) {
+      yield * b.allHoverResponders();
+    }
   }
   @action
   insertDroppedBlocks(droppedBlocks,position) {
@@ -338,7 +356,7 @@ export class BlockModel {
     }
   }
   @action  
-  addFieldSet(fieldSet,segmentIdx) {
+  addFieldSet(fieldSet,segmentIdx) { //todo: better semantics for addStack and addFieldSet
     if(segmentIdx==undefined){
       segmentIdx = this.segments.length-1;
     }
@@ -478,8 +496,8 @@ export class BlockModel {
     const dragBlocks = this.parent.blocks.slice(this.indexInStack)  // grab this block and all blocks beneath.
     uiTracker.startDrag(evt, dragBlocks);
   } 
-  isDropTarget({x,y}) { 
-    ll("isTarget?", this.blockTitle)
+  get isDropTarget() { 
+    const {x,y} = uiTracker.canvasDragLocation;
     const margin = theme.blockMargin;
     if( y < this.canvasY - margin ) 
       return false;
@@ -490,11 +508,35 @@ export class BlockModel {
     if( x > this.topBlockStack.canvasX + this.topBlockStack.width) 
       return false; 
     if( this.isDragging ) return false;
-    ll("---isTarget?", this.blockTitle, true)
     return true;
   }
+  containsPoint({x,y}) {
+    if( y < this.canvasY ) 
+      return false;
+    if( y > this.canvasY + this.height ) 
+      return false;
+    if( x < this.canvasX)             
+      return false;
+    if( x > this.canvasX + this.width) 
+      return false; 
+    // is in a FieldSet?
+    const inFieldSet = this.segments.some( segm=> {
+      const fs = segm.fieldSet
+      const fsX = fs.canvasX
+      const fsY = fs.canvasY
+      if(x < fsX - theme.blockContentPaddingLeft) return false;
+      if(x > fsX + fs.width + theme.blockContentPaddingRight) return false;
+      if(y < fsY - theme.blockContentPaddingY) return false;
+      if(y > fsY + fs.height + theme.blockContentPaddingY) return false;
+      return true;
+    })
+    if(inFieldSet) return true;
+    if(x<this.canvasX+theme.blockVerticalArmWidth) return true; // in vertical arm;
+    if(y>this.canvasY+this.height-theme.finalArmHeight && x < this.canvasX+this.finalArmWidth) // in final arm
+      return true;
+  }
   @action
-  getDropLocation(draggedBlocks,dragCursorPos) {
+  getDropLocation(dragCursorPos) {
     const {fieldSetPositions} = this.segmentsLayout;
     const margin = theme.blockMargin;
     const padding = theme.blockContentPaddingY;
@@ -532,37 +574,34 @@ export class BlockModel {
       }
       const finalArmHeight = theme.blockFinalArmHeight;
       const finalArmTop = this.canvasY + this.height - finalArmHeight - margin; 
-      // if( dragY >= finalArmTop && dragY <= finalArmTop + finalArmHeight / 2 + margin) {
-      //   return [lastSegm.stack,lastSegm.stack.blocks.length]
-      // } else if( dragY >= finalArmTop  + finalArmHeight / 2  + margin && dragY <= finalArmTop + finalArmHeight  + 2*margin)  {
-      //   const dropIndex = this.indexInStack + 1;
-      //   return [this.parent, dropIndex]
-      // } else {
-      //     throw new Error(`Weird: in Droptarget block, not on fieldset, not on final arm. "${this.blockTitle}"`)
-      // }
       if( dragY >= finalArmTop && dragY <= finalArmTop + finalArmHeight  + 2*margin)  {
         const dropIndex = this.indexInStack + 1;
-        ll("###", ()=>this.debugName, ()=>this.parent.debugName)
         return [this.parent, dropIndex]
       } else {
           throw new Error(`Weird: in Droptarget block, not on fieldset, not on final arm. "${this.blockTitle}"`)
       }
     }
   }
-  //todo: adjust for mult. segments
-  @action 
-  visitBlockDropTargets(f,acc) {
-    let descendToChildren;
-    [acc,descendToChildren] = f(this,acc)
-    if(descendToChildren===false) {
-      return acc;
+  * allBlockDropTargets() {
+    if(! this.isDropTarget ) {
+      return;
+    }
+    yield this;
+    for( const segm of this.segments ) {
+      if( segm.stack ) {
+        yield * segm.stack.allBlockDropTargets()      
+      } 
+    }
+  }
+  * allHoverResponders() {
+    if( this.containsPoint(uiTracker.canvasMouseLocation) ) {
+      yield this;
     }
     for( const segm of this.segments ) {
       if( segm.stack ) {
-        acc = segm.stack.visitBlockDropTargets(f,acc) 
+        yield * segm.stack.allHoverResponders()      
       } 
     }
-    return acc;
   }
   @computed
   get finalArmWidth() {
@@ -574,8 +613,8 @@ export class BlockModel {
   @computed
   get finalLabelCanvasPosition() {
     let {x,y} = this.segmentsLayout.finalLabelPosition
-    x += this.parent.canvasX;
-    y += this.parent.canvasY;
+    x += this.canvasX;
+    y += this.canvasY;
     return {x,y};
   }
   @action.bound
