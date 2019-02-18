@@ -4,6 +4,7 @@ import * as mxu from "mobx-utils";
 import * as mxr from "mobx-react";
 import { setLogEnabled } from "mobx-react-devtools";
 
+import { measureTextWidth } from "../helpers/measure";
 
 import { theme } from "../style/defaultStyleParams";
 import { uniqueName } from "../helpers/nameMaker";
@@ -17,7 +18,7 @@ export class FieldModel {
   @observable id;
   @observable debugName;
 
-  @observable _measurements = {valueWidth:0,labelWidth:0};
+  // @observable _measurements = {valueWidth:0,labelWidth:0};
   @observable parent = null;
 
   constructor({name, value, id}, parent) {
@@ -39,11 +40,11 @@ export class FieldModel {
   }
   @computed 
   get width() {
-    return this._measurements.labelWidth + this._measurements.valueWidth;
+    return this.labelWidth + this.valueWidth;
   }
   @computed 
   get maxValueWidth() { 
-    return theme.blockHeaderMaxWidth - this._measurements.labelWidth;
+    return theme.blockHeaderMaxWidth - this.labelWidth;
   }
   @computed 
   get height() { 
@@ -65,16 +66,43 @@ export class FieldModel {
   get canvasY() {
     return this.childY + this.parent.canvasY;
   }
+  @computed
+  get labelWidth() {
+    const {blockFontSize, fieldLabelFont} = theme;
+    const fontSpec = `400 ${blockFontSize}px "${fieldLabelFont}"`;
+    const width = measureTextWidth(this.label, fontSpec) + theme.fieldLabelValueSpace;
+    return width;
+  }
+  @computed
+  get valueWidth() {
+    const {blockFontSize, fieldInputFont} = theme;
+    const fontSpec = `500 ${blockFontSize}px "${fieldInputFont}"`;
+    const width = measureTextWidth(this.value||'\u00a0\u00a0', fontSpec);
+    return width;
+  }  
   @action.bound
   handleValueChange(value) {
     this.value = value;
   }
-  @action.bound
-  updateValueWidth(width) {
-    this._measurements.valueWidth = width;
-  }
-  @action.bound
-  updateLabelWidth(width) {
-    this._measurements.labelWidth = width;
-  }
+  // @action.bound
+  // updateValueWidth(width) {
+  //   this._measurements.valueWidth = width;
+
+  //   const {blockFontSize, fieldInputFont} = theme;
+  //   const fontSpec = `500 ${blockFontSize}px "${fieldInputFont}"`;
+  //   const w = measureTextWidth(this.value||'\u00a0\u00a0', fontSpec);
+  //   const dist = Math.round(Math.abs(width-w)*100)/100
+  //   if( dist > 0.3 ) 
+  //     ll("Upd-VALUE-W", ()=>this.value, (dist)=>Math.round(Math.abs(width-w)*100)/100,(fromComponent)=>width, (fromCanvas)=>w);
+  // }
+  // @action.bound
+  // updateLabelWidth(width) {
+  //   this._measurements.labelWidth = width;
+  //   const {blockFontSize, fieldLabelFont} = theme;
+  //   const fontSpec = `400 ${blockFontSize}px "${fieldLabelFont}"`;
+  //   const w = measureTextWidth(this.label, fontSpec) + theme.fieldLabelValueSpace;
+  //   const dist = Math.round(Math.abs(width-w)*100)/100
+  //   if( dist > 0.3 ) 
+  //     ll("Upd-LABEL-W", ()=>this.label, ()=>dist,(fromComponent)=>width, (fromCanvas)=>w);
+  // }
 }

@@ -6,7 +6,7 @@ import * as mxr from "mobx-react";
 import { setLogEnabled } from "mobx-react-devtools";
 
 import { uiTracker } from "../helpers/UITracker";
-import { rectContainsPoint } from "../helpers/measure";
+import { measureTextWidth } from "../helpers/measure";
 import { uniqueName } from "../helpers/nameMaker";
 import cuid from "cuid";
 
@@ -242,11 +242,11 @@ class FieldSetModel {
   @computed 
   get fieldsLayout() {
     const fieldPositions = new Map();
-    let currX = this._measurements.titleWidth;
+    let currX = this.titleWidth;
     const maxWidth = theme.blockMaxWidth 
                      - theme.blockContentPaddingLeft 
                      - this.parent.blockDepth * (theme.blockVerticalArmWidth + theme.blockMargin);
-    let curWidth = this._measurements.titleWidth;
+    let curWidth = this.titleWidth;
     let currY = 0; 
     let currLineHeight = theme.blockFontSize;
     this.fields.forEach( (field,idx)=>{
@@ -284,8 +284,6 @@ class FieldSetModel {
   }
   @computed 
   get canvasY() {
-    if(this.title == "while") {
-    }
     return this.childY + this.parent.canvasY;
   }
   get width() {
@@ -297,10 +295,21 @@ class FieldSetModel {
   fieldPosition(field) {
     return this.fieldsLayout.fieldPositions.get(field);
   }
-  @action.bound
-  updateTitleWidth(width){
-    this._measurements.titleWidth = width;
+  @computed 
+  get titleWidth() {
+    const {blockFontSize, blockFont} = theme;
+    const fontSpec = `600 ${blockFontSize}px "${blockFont}"`;
+    const width = measureTextWidth(this.title, fontSpec);
+    return width;
   }
+  // @action.bound
+  // updateTitleWidth(width){
+  //   this._measurements.titleWidth = width;
+  //   const {blockFontSize, blockFont} = theme;
+  //   const fontSpec = `600 ${blockFontSize}px "${blockFont}"`;
+  //   const w = measureTextWidth(this.title, fontSpec);
+  //   ll("UpdTW", ()=>this.title, (fromComponent)=>width, (fromCanvas)=>w);
+  // }
 }
 
 
@@ -605,8 +614,13 @@ export class BlockModel {
   }
   @computed
   get finalArmWidth() {
+
+    const {blockFinalArmFontSize, blockFont} = theme;
+    const fontSpec = `400 ${blockFinalArmFontSize}px "${blockFont}"`;
+    const finalArmLabelWidth = measureTextWidth(this.finalArmLabel, fontSpec);
+
     const realWidth = theme.blockContentPaddingLeft 
-                      + this._measurements.finalArmLabelWidth 
+                      + finalArmLabelWidth 
                       + theme.blockContentPaddingRight;
     return Math.max(realWidth, theme.blockFinalArmMinWidth);
   }
@@ -617,9 +631,13 @@ export class BlockModel {
     y += this.canvasY;
     return {x,y};
   }
-  @action.bound
-  updateFinalArmWidth(width){
-    this._measurements.finalArmLabelWidth = width;
-  }
+  // @action.bound
+  // updateFinalArmWidth(width){
+  //   this._measurements.finalArmLabelWidth = width;
+  //   const {blockFinalArmFontSize, blockFont} = theme;
+  //   const fontSpec = `400 ${blockFinalArmFontSize}px "${blockFont}"`;
+  //   const w = measureTextWidth(this.finalArmLabel, fontSpec);
+  //   ll("UpdFAW", ()=>this.finalArmLabel, (fromComponent)=>width, (fromCanvas)=>w);
+  // }
 } 
 

@@ -1,4 +1,7 @@
   
+body
+  touch-action: none;
+  
 body.noSelect
   -webkit-user-select: none; 
   -moz-user-select: none;     
@@ -79,7 +82,7 @@ body.noSelect
 
 .blockTitle, .blockFinalLabel
   position: absolute
-  font-family: "Barlow Semi Condensed"
+  font-family: var(--blockFont)
   color: var(--blockLabelColor)
   line-height: var(--blockFontSize)
   white-space: nowrap
@@ -90,7 +93,7 @@ body.noSelect
 
 
 .blockFinalLabel
-  font-weight: 400 // semi-bold
+  font-weight: 400 
   font-size: var(--blockFinalArmFontSize)
 
 .isGhost
@@ -144,7 +147,7 @@ svg.blockBackground.isDragItem
   .label
     display: inline-block
     font:
-      family: "Barlow Semi Condensed"
+      family: var(--fieldLabelFont)
       size: var(--blockFontSize)
     color: var(--fieldLabelColor)
     overflow-x: hidden
@@ -156,7 +159,7 @@ svg.blockBackground.isDragItem
 
   .inputWidget
     font:
-      family: "Barlow"
+      family: var(--fieldInputFont)
       size: var(--blockFontSize)
       weight: 500
     color: var(--fieldInputColor)
