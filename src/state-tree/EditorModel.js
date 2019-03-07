@@ -28,11 +28,14 @@ export class EditorModel {
     this.viewportX = x;
     this.viewportY = y;
 
-    this._measureRef = React.createRef();
+    this._measureRef = null;
     this._clientRect = null;
   }
   get measureRef() {
     return this._measureRef;
+  }
+  set measureRef(ref) {
+    this._measureRef = ref;
   }
   @computed get
   containsMouse() {
