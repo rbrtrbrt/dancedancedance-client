@@ -216,8 +216,6 @@ class FieldSetModel {
   @observable title;
   @observable fields = [];
 
-  @observable _measurements = {titleWidth:0}
-
   constructor({title, id, fields}, parent) {
     checkType( ()=> parent, Object );
     checkOptionalType( ()=> id, String);
@@ -302,16 +300,7 @@ class FieldSetModel {
     const width = measureTextWidth(this.title, fontSpec);
     return width;
   }
-  // @action.bound
-  // updateTitleWidth(width){
-  //   this._measurements.titleWidth = width;
-  //   const {blockFontSize, blockFont} = theme;
-  //   const fontSpec = `600 ${blockFontSize}px "${blockFont}"`;
-  //   const w = measureTextWidth(this.title, fontSpec);
-  //   ll("UpdTW", ()=>this.title, (fromComponent)=>width, (fromCanvas)=>w);
-  // }
 }
-
 
 export class BlockModel {
   //= public 
@@ -320,9 +309,6 @@ export class BlockModel {
   @observable title;
   @observable parent;
   @observable segments;
-
-  //= private
-  @observable _measurements = {finalArmLabelWidth:0}
 
   // A block can contain multiple segments. Each segment has a title, an optional list of fields 
   // and a substack (list of blocks in the 'C'). If there is only one segment, the substack is also optional.
@@ -631,13 +617,5 @@ export class BlockModel {
     y += this.canvasY;
     return {x,y};
   }
-  // @action.bound
-  // updateFinalArmWidth(width){
-  //   this._measurements.finalArmLabelWidth = width;
-  //   const {blockFinalArmFontSize, blockFont} = theme;
-  //   const fontSpec = `400 ${blockFinalArmFontSize}px "${blockFont}"`;
-  //   const w = measureTextWidth(this.finalArmLabel, fontSpec);
-  //   ll("UpdFAW", ()=>this.finalArmLabel, (fromComponent)=>width, (fromCanvas)=>w);
-  // }
 } 
 

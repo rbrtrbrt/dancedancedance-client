@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom';
 import makeInspectable from "mobx-devtools-mst";
 
 import './style/defaultStyleParams';
+import { loadAllFonts } from './style/loadFonts';
 import './style/main.sass';
 
 import cuid from 'cuid';
@@ -117,4 +118,9 @@ const theUITracker = new UITracker(testAppModel);
 window.app = testAppModel
 makeInspectable(testAppModel);
 
-ReactDOM.render(<AppUI appInfo={testAppModel}/>, document.getElementById("react-root"))
+// all fonts used in blocks must be loaded before the first render, because
+// the blocks measure the size of their text-items for layout.
+loadAllFonts().then( fonts => {
+  ll("fontsLoaded", ()=> fonts);
+  ReactDOM.render(<AppUI appInfo={testAppModel}/>, document.getElementById("react-root"))
+})
