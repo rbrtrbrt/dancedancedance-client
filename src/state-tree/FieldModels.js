@@ -4,6 +4,7 @@ import * as mxu from "mobx-utils";
 import * as mxr from "mobx-react";
 import { setLogEnabled } from "mobx-react-devtools";
 
+import { measureTextWidth } from "../helpers/measure";
 
 import { theme } from "../style/defaultStyleParams";
 import { uniqueName } from "../helpers/nameMaker";
@@ -17,7 +18,6 @@ export class FieldModel {
   @observable id;
   @observable debugName;
 
-  @observable _measurements = {valueWidth:0,labelWidth:0};
   @observable parent = null;
 
   constructor({name, value, id}, parent) {
@@ -39,11 +39,11 @@ export class FieldModel {
   }
   @computed 
   get width() {
-    return this._measurements.labelWidth + this._measurements.valueWidth;
+    return this.labelWidth + this.valueWidth;
   }
   @computed 
   get maxValueWidth() { 
-    return theme.blockHeaderMaxWidth - this._measurements.labelWidth;
+    return theme.blockHeaderMaxWidth - this.labelWidth;
   }
   @computed 
   get height() { 
@@ -65,16 +65,22 @@ export class FieldModel {
   get canvasY() {
     return this.childY + this.parent.canvasY;
   }
+  @computed
+  get labelWidth() {
+    const {blockFontSize, fieldLabelFont} = theme;
+    const fontSpec = `400 ${blockFontSize}px "${fieldLabelFont}"`;
+    const width = measureTextWidth(this.label, fontSpec) + theme.fieldLabelValueSpace;
+    return width;
+  }
+  @computed
+  get valueWidth() {
+    const {blockFontSize, fieldInputFont} = theme;
+    const fontSpec = `500 ${blockFontSize}px "${fieldInputFont}"`;
+    const width = measureTextWidth(this.value||'\u00a0\u00a0', fontSpec);
+    return width;
+  }  
   @action.bound
   handleValueChange(value) {
     this.value = value;
-  }
-  @action.bound
-  updateValueWidth(width) {
-    this._measurements.valueWidth = width;
-  }
-  @action.bound
-  updateLabelWidth(width) {
-    this._measurements.labelWidth = width;
   }
 }

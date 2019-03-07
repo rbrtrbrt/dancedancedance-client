@@ -135,21 +135,21 @@ class BlockStackBackground extends React.PureComponent {
 
 
 
-const BlockTitle = Measuring(class BlockTitle extends React.PureComponent {
+class BlockTitle extends React.PureComponent {
   render() {    
     const {x,y,text, extraClasses} = this.props;
     const classStr = classnames("blockTitle", extraClasses);
     return <div className={classStr} style={{top: y, left:x}}>{text}</div>
   }
-})
+}
 
-const BlockFinalLabel = Measuring(class BlockFinalLabel extends React.PureComponent {
+class BlockFinalLabel extends React.PureComponent {
   render() {    
     const {x,y,text, extraClasses} = this.props;
     const classStr = classnames("blockFinalLabel",extraClasses);
     return <div className={classStr} style={{top: y, left:x}}>{text}</div>
   }
-})
+}
 
 
 @observer
@@ -201,7 +201,6 @@ class BasicBlockUI extends React.Component {
                                 x={anim.xx} 
                                 y={anim.yy} 
                                 extraClasses={extraClasses} 
-                                onMeasure={({width})=>block.updateFinalArmWidth(width)} 
                />  
           }
         </Spring>

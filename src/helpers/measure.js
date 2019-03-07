@@ -3,7 +3,8 @@ import ReactDOM from "react-dom";
 
 import {ll} from './debug/ll';
 
-export function offsetFromDocument(domElement) {
+export 
+function offsetFromDocument(domElement) {
   const {top,right,bottom,left,width,height} = domElement.getBoundingClientRect(),
   scrollLeft = window.pageXOffset || document.documentElement.scrollLeft,
   scrollTop = window.pageYOffset || document.documentElement.scrollTop;
@@ -11,19 +12,34 @@ export function offsetFromDocument(domElement) {
   return rect
 }
 
-export function domRectContainsPoint(rect,px,py) {
+export 
+function domRectContainsPoint(rect,px,py) {
   const {left,right,top,bottom, x,y,width,height} = rect
   return px > left && px < right && py > top && py < bottom
 }
 
-export function rectContainsPoint(rect,px,py) {
+export 
+function rectContainsPoint(rect,px,py) {
   const {x,y,width,height} = rect;
   return px > x && px < x+width && py > y && py < y+height; 
 }
 
-export function vectorLength(dx,dy) {
+export 
+function vectorLength(dx,dy) {
   return Math.sqrt( dx**2 + dy**2)
 }
+
+
+const textMeasureCanvas = document.createElement("canvas");
+
+export 
+function measureTextWidth(text, font) {
+  var context = textMeasureCanvas.getContext("2d");
+  context.font = font;
+  var metrics = context.measureText(text);
+  return metrics.width;
+}
+
 
 
 // Higher order component for measuring elements after each render.

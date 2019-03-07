@@ -6,7 +6,7 @@ import * as mxr from "mobx-react";
 import { setLogEnabled } from "mobx-react-devtools";
 
 import { uiTracker } from "../helpers/UITracker";
-import { rectContainsPoint } from "../helpers/measure";
+import { measureTextWidth } from "../helpers/measure";
 import { uniqueName } from "../helpers/nameMaker";
 import cuid from "cuid";
 
@@ -216,8 +216,6 @@ class FieldSetModel {
   @observable title;
   @observable fields = [];
 
-  @observable _measurements = {titleWidth:0}
-
   constructor({title, id, fields}, parent) {
     checkType( ()=> parent, Object );
     checkOptionalType( ()=> id, String);
@@ -242,11 +240,11 @@ class FieldSetModel {
   @computed 
   get fieldsLayout() {
     const fieldPositions = new Map();
-    let currX = this._measurements.titleWidth;
+    let currX = this.titleWidth;
     const maxWidth = theme.blockMaxWidth 
                      - theme.blockContentPaddingLeft 
                      - this.parent.blockDepth * (theme.blockVerticalArmWidth + theme.blockMargin);
-    let curWidth = this._measurements.titleWidth;
+    let curWidth = this.titleWidth;
     let currY = 0; 
     let currLineHeight = theme.blockFontSize;
     this.fields.forEach( (field,idx)=>{
@@ -284,8 +282,6 @@ class FieldSetModel {
   }
   @computed 
   get canvasY() {
-    if(this.title == "while") {
-    }
     return this.childY + this.parent.canvasY;
   }
   get width() {
@@ -297,12 +293,14 @@ class FieldSetModel {
   fieldPosition(field) {
     return this.fieldsLayout.fieldPositions.get(field);
   }
-  @action.bound
-  updateTitleWidth(width){
-    this._measurements.titleWidth = width;
+  @computed 
+  get titleWidth() {
+    const {blockFontSize, blockFont} = theme;
+    const fontSpec = `600 ${blockFontSize}px "${blockFont}"`;
+    const width = measureTextWidth(this.title, fontSpec);
+    return width;
   }
 }
-
 
 export class BlockModel {
   //= public 
@@ -311,9 +309,6 @@ export class BlockModel {
   @observable title;
   @observable parent;
   @observable segments;
-
-  //= private
-  @observable _measurements = {finalArmLabelWidth:0}
 
   // A block can contain multiple segments. Each segment has a title, an optional list of fields 
   // and a substack (list of blocks in the 'C'). If there is only one segment, the substack is also optional.
@@ -605,8 +600,13 @@ export class BlockModel {
   }
   @computed
   get finalArmWidth() {
+
+    const {blockFinalArmFontSize, blockFont} = theme;
+    const fontSpec = `400 ${blockFinalArmFontSize}px "${blockFont}"`;
+    const finalArmLabelWidth = measureTextWidth(this.finalArmLabel, fontSpec);
+
     const realWidth = theme.blockContentPaddingLeft 
-                      + this._measurements.finalArmLabelWidth 
+                      + finalArmLabelWidth 
                       + theme.blockContentPaddingRight;
     return Math.max(realWidth, theme.blockFinalArmMinWidth);
   }
@@ -616,10 +616,6 @@ export class BlockModel {
     x += this.canvasX;
     y += this.canvasY;
     return {x,y};
-  }
-  @action.bound
-  updateFinalArmWidth(width){
-    this._measurements.finalArmLabelWidth = width;
   }
 } 
 

@@ -9,6 +9,7 @@ const neutral = chroma.scale(["white","#E6E1DB","#55493A","#1F1100"]).correctLig
 const blockMargin__px              = 2;
 const blockCornerRadius__px        = 5;
 const blockMaxWidth__px            = 333;
+const blockFont                    = "Barlow Semi Condensed"
 const blockFontSize__px            = 14;
 const blockLineSpace__px           = 2;
 const blockLineHeight__px          = blockFontSize__px + blockLineSpace__px;
@@ -31,7 +32,6 @@ const stackBackground              = neutral(0.05).hex();
 const stackBackground_highlight    = neutral(0.035).hex();
 const topStackPadding__px          = 2;
 const blockLabelColor              = neutral(0.6).hex();
-const blockInputColor              = neutral(1).hex();
 const blockSingleLineHeight__px    = blockFontSize__px + blockContentPaddingY__px * 2;
 const blockEmptyStackHeight__px    = blockSingleLineHeight__px/2;
  
@@ -39,6 +39,8 @@ const blockEmptyStackHeight__px    = blockSingleLineHeight__px/2;
 // const blockBackground_ghost_light = chroma(blockBackground_ghost).darken(0.2);
 // const blockFontColor_ghost        = chroma(blockFontColor).brighten(2);
 
+const fieldLabelFont  = "Barlow Semi Condensed";
+const fieldInputFont  = "Barlow";
 const fieldLabelColor = neutral(0.6);
 const fieldInputColor = neutral(1);
 const fieldSeparationSpace__px = 4;
@@ -67,6 +69,7 @@ const allStyleParams =  {
   topStackPadding__px,
   stackBackground,
   stackBackground_highlight, 
+  blockFont,
   blockFontSize__px,
   blockLineSpace__px,
   blockLineHeight__px,
@@ -75,7 +78,8 @@ const allStyleParams =  {
   // blockBackground_ghost_light, 
   // blockFontColor_ghost,  
   blockLabelColor,
-  blockInputColor,
+  fieldLabelFont,
+  fieldInputFont,
   fieldLabelColor,
   fieldInputColor,
   fieldSeparationSpace__px,

@@ -10,18 +10,18 @@ import { InputWidget } from "./InputWidget";
 import { ll, gg, ge } from "../helpers/debug/ll";
 import { Measuring } from "../helpers/measure";
 
-const FieldLabel = Measuring(class FieldLabel extends React.Component {
+class FieldLabel extends React.Component {
   render() {
     return <div className="label">{this.props.text}</div>
   }
-})
+}
 
-const FieldValue = Measuring(class FieldValue extends React.Component {
+class FieldValue extends React.Component {
   render() {
     const {value, onChange, maxWidth} = this.props;
     return <InputWidget value={value} onChange={onChange} maxWidth={maxWidth} />
   }
-})
+}
 
 @observer
 class BasicFieldUI extends React.Component {
@@ -35,7 +35,10 @@ class BasicFieldUI extends React.Component {
     const field = this.props.fieldInfo
     return (
       <Fragment>
-        <FieldLabel text={field.label}  onMeasure={({width}) => field.updateLabelWidth(width)} /><FieldValue value={field.value} onChange={this.onValueChange} maxWidth={field.maxValueWidth} onMeasure={({width})=>field.updateValueWidth(width)}/>
+        <FieldLabel text={field.label} />
+        <FieldValue value={field.value} 
+                    onChange={this.onValueChange} 
+                    maxWidth={field.maxValueWidth}/>
       </Fragment>
     )
   }
