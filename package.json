@@ -15,7 +15,7 @@
     "babel-preset-react": "^6.24.1",
     "firebase-tools": "^4.2.1",
     "mobx-react-devtools": "^6.0.3",
-    "mocha": "^5.2.0",
+    "mocha": "^10.2.0",
     "node-sass": "^4.9.3",
     "parcel": "^1.10.3",
     "parcel-bundler": "^1.9.7",
